@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, send_file
 from PIL import Image, ImageDraw, ImageFont
 import os, zipfile, uuid
-
+OUTPUT_DIR = "/tmp/outputs"
 app = Flask(__name__)
 
 OUTPUT_DIR = "static/outputs"
