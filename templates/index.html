@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Promo Image Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #fff7ed, #fdf2f8, #eef2ff);
+      min-height: 100vh;
+      color: #111827;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: auto;
+      padding: 40px 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 38px;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #6b7280;
+      font-size: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+      border: 1px solid rgba(255,255,255,0.8);
+    }
+
+    label {
+      display: block;
+      margin-top: 16px;
+      margin-bottom: 8px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    input,
+    textarea,
+    select,
+    button {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 12px;
+      border: 1px solid #d1d5db;
+      font-size: 15px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 210px;
+      resize: vertical;
+      font-family: Consolas, monospace;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+
+    .upload-box {
+      border: 2px dashed #c7d2fe;
+      background: #eef2ff;
+      padding: 20px;
+      border-radius: 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .upload-box:hover {
+      background: #e0e7ff;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 6px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .preview-wrap {
+      border-radius: 18px;
+      overflow: hidden;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      min-height: 360px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .preview-wrap img {
+      width: 100%;
+      max-height: 520px;
+      object-fit: contain;
+      display: none;
+    }
+
+    .empty-preview {
+      color: #9ca3af;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .preview-badge {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: #e53935;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 14px;
+      font-weight: 800;
+      display: none;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+
+    .submit-btn {
+      margin-top: 22px;
+      background: linear-gradient(135deg, #111827, #4f46e5);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      transition: 0.2s;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(79,70,229,0.28);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .progress-area {
+      margin-top: 18px;
+      display: none;
+    }
+
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #4b5563;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: #e5e7eb;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #22c55e, #4f46e5);
+      border-radius: 99px;
+      transition: width 0.3s;
+    }
+
+    .small-note {
+      margin-top: 12px;
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header h1 {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div class="header">
+      <h1>Promo Image Generator</h1>
+      <p>Upload one product image and generate multiple sale, offer, and badge images in a ZIP file.</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="promoForm">
+      <div class="grid">
+
+        <div class="card">
+          <label>Upload Product Image</label>
+
+          <div class="upload-box" onclick="document.getElementById('imageInput').click()">
+            <strong>Click to upload image</strong>
+            <div class="hint">PNG, JPG, JPEG supported</div>
+          </div>
+
+          <input
+            type="file"
+            name="image"
+            id="imageInput"
+            accept="image/*"
+            required
+            style="display:none;"
+          />
+
+          <label>Custom Labels</label>
+          <div class="hint">Use this format: Text | Color Code</div>
+
+          <textarea name="labels" id="labelsInput">SALE | #e53935
+20% OFF | #fb8c00
+BEST SELLER | #43a047
+NEW ARRIVAL | #1e88e5
+LIMITED OFFER | #d81b60
+HOT DEAL | #8e24aa
+PREMIUM | #00897b
+30% OFF | #f4511e
+TRENDING | #3949ab
+BEST PRICE | #6d4c41</textarea>
+
+          <div class="row">
+            <div>
+              <label>Badge Position</label>
+              <select name="position" id="positionInput">
+                <option value="top-left">Top Left</option>
+                <option value="top-right">Top Right</option>
+                <option value="bottom-left">Bottom Left</option>
+                <option value="bottom-right">Bottom Right</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Border Width</label>
+              <input type="number" name="border_width" value="10" min="0" max="50" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Font Size</label>
+              <input type="number" name="font_size" value="36" min="12" max="100" />
+            </div>
+
+            <div>
+              <label>Badge Radius</label>
+              <input type="number" name="radius" value="14" min="0" max="50" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Badge Padding X</label>
+              <input type="number" name="padding_x" value="18" min="5" max="80" />
+            </div>
+
+            <div>
+              <label>Badge Padding Y</label>
+              <input type="number" name="padding_y" value="12" min="5" max="80" />
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submitBtn" disabled>
+            Generate Images ZIP
+          </button>
+
+          <div class="progress-area" id="progressArea">
+            <div class="progress-text">
+              <span id="progressStatus">Preparing images...</span>
+              <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+          </div>
+
+          <div class="small-note">
+            Submit button will be enabled after selecting an image.
+          </div>
+        </div>
+
+        <div class="card">
+          <label>Image Preview</label>
+
+          <div class="preview-wrap" id="previewBox">
+            <div class="empty-preview" id="emptyPreview">
+              Your uploaded image preview will appear here.
+            </div>
+
+            <img id="previewImage" />
+            <div class="preview-badge" id="previewBadge">SALE</div>
+          </div>
+
+          <div class="small-note">
+            This preview shows the first label only. Final ZIP will include all labels.
+          </div>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById("promoForm");
+    const imageInput = document.getElementById("imageInput");
+    const labelsInput = document.getElementById("labelsInput");
+    const submitBtn = document.getElementById("submitBtn");
+
+    const previewImage = document.getElementById("previewImage");
+    const emptyPreview = document.getElementById("emptyPreview");
+    const previewBadge = document.getElementById("previewBadge");
+    const positionInput = document.getElementById("positionInput");
+
+    const progressArea = document.getElementById("progressArea");
+    const progressFill = document.getElementById("progressFill");
+    const progressPercent = document.getElementById("progressPercent");
+    const progressStatus = document.getElementById("progressStatus");
+
+    function getFirstLabel() {
+      const firstLine = labelsInput.value.trim().split("\n")[0] || "SALE | #e53935";
+      const parts = firstLine.split("|");
+      return {
+        text: parts[0]?.trim() || "SALE",
+        color: parts[1]?.trim() || "#e53935"
+      };
+    }
+
+    function updatePreviewBadge() {
+      const label = getFirstLabel();
+
+      previewBadge.innerText = label.text;
+      previewBadge.style.background = label.color;
+
+      previewBadge.style.top = "20px";
+      previewBadge.style.left = "20px";
+      previewBadge.style.right = "auto";
+      previewBadge.style.bottom = "auto";
+
+      const position = positionInput.value;
+
+      if (position === "top-right") {
+        previewBadge.style.right = "20px";
+        previewBadge.style.left = "auto";
+      }
+
+      if (position === "bottom-left") {
+        previewBadge.style.bottom = "20px";
+        previewBadge.style.top = "auto";
+      }
+
+      if (position === "bottom-right") {
+        previewBadge.style.right = "20px";
+        previewBadge.style.bottom = "20px";
+        previewBadge.style.left = "auto";
+        previewBadge.style.top = "auto";
+      }
+    }
+
+    imageInput.addEventListener("change", function () {
+      const file = this.files[0];
+
+      if (!file) {
+        submitBtn.disabled = true;
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        previewImage.src = e.target.result;
+        previewImage.style.display = "block";
+        emptyPreview.style.display = "none";
+        previewBadge.style.display = "block";
+        submitBtn.disabled = false;
+        updatePreviewBadge();
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    labelsInput.addEventListener("input", updatePreviewBadge);
+    positionInput.addEventListener("change", updatePreviewBadge);
+
+    form.addEventListener("submit", function () {
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Generating ZIP...";
+
+      progressArea.style.display = "block";
+
+      let progress = 0;
+
+      const interval = setInterval(() => {
+        if (progress < 90) {
+          progress += Math.floor(Math.random() * 8) + 4;
+          if (progress > 90) progress = 90;
+
+          progressFill.style.width = progress + "%";
+          progressPercent.innerText = progress + "%";
+        }
+      }, 300);
+
+      progressStatus.innerText = "Creating promo images...";
+
+      setTimeout(() => {
+        progressStatus.innerText = "Preparing ZIP download...";
+      }, 1200);
+
+      setTimeout(() => {
+        progressFill.style.width = "100%";
+        progressPercent.innerText = "100%";
+        progressStatus.innerText = "Download will start...";
+      }, 2200);
+    });
+  </script>
+</body>
+</html>
