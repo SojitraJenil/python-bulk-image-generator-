@@ -206,6 +206,52 @@ def get_position(position, w, h, box_w, box_h, margin):
     return margin, margin
 
 
+def calculate_badge_metrics(image_width, image_height, text, base_font_size, base_padding_x, base_padding_y, base_radius, base_margin, base_border_width):
+    if not text:
+        return {
+            "font_size": max(20, int(min(image_width, image_height) * 0.04)),
+            "padding_x": max(12, int(min(image_width, image_height) * 0.02)),
+            "padding_y": max(8, int(min(image_width, image_height) * 0.012)),
+            "radius": max(6, int(min(image_width, image_height) * 0.012)),
+            "margin": max(10, int(min(image_width, image_height) * 0.016)),
+            "border_width": max(1, int(min(image_width, image_height) * 0.002)),
+            "shadow_offset": max(4, int(min(image_width, image_height) * 0.008)),
+        }
+
+    image_width = max(1, int(image_width))
+    image_height = max(1, int(image_height))
+    min_side = min(image_width, image_height)
+
+    text_length_factor = min(1.0, max(0.2, len(text) / 24.0))
+    font_size = max(int(base_font_size * 0.9), int(image_width * 0.055), 24)
+    padding_x = max(18, int(image_width * 0.032))
+    padding_y = max(12, int(min_side * 0.017))
+    radius = max(10, int(min_side * 0.018))
+    margin = max(12, int(min_side * 0.020))
+    border_width = max(1, int(min_side * 0.002))
+    shadow_offset = max(5, int(min_side * 0.008))
+
+    target_width_ratio = 0.22 + min(0.12, text_length_factor * 0.12)
+    target_box_width = max(int(image_width * 0.22), int(image_width * min(0.35, target_width_ratio)))
+
+    sample_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    font = get_font(font_size)
+    bbox = sample_draw.textbbox((0, 0), text, font=font)
+    text_w = bbox[2] - bbox[0]
+    box_w = max(text_w + padding_x * 2, target_box_width)
+
+    return {
+        "font_size": font_size,
+        "padding_x": padding_x,
+        "padding_y": padding_y,
+        "radius": radius,
+        "margin": margin,
+        "border_width": border_width,
+        "shadow_offset": shadow_offset,
+        "box_width": box_w,
+    }
+
+
 def resize_for_preset(image, preset):
     if preset == "meesho_square":
         target_size = (1080, 1080)
@@ -304,32 +350,34 @@ def draw_badge(image, text, badge_color, text_color, position, font_size, paddin
 
     img = image.convert("RGBA")
     draw = ImageDraw.Draw(img)
-    font = get_font(font_size)
+    metrics = calculate_badge_metrics(img.width, img.height, text, font_size, padding_x, padding_y, radius, margin, border_width)
+    font = get_font(metrics["font_size"])
 
     bbox = draw.textbbox((0, 0), text, font=font)
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
 
-    box_w = text_w + padding_x * 2
-    box_h = text_h + padding_y * 2
-    x, y = get_position(position, img.width, img.height, box_w, box_h, margin)
+    box_w = max(text_w + metrics["padding_x"] * 2, metrics.get("box_width", text_w + metrics["padding_x"] * 2))
+    box_h = text_h + metrics["padding_y"] * 2
+    x, y = get_position(position, img.width, img.height, box_w, box_h, metrics["margin"])
 
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     overlay_draw = ImageDraw.Draw(overlay)
 
     if shadow_enabled:
-        shadow_offset = 8
-        overlay_draw.rounded_rectangle((x + shadow_offset, y + shadow_offset, x + box_w + shadow_offset, y + box_h + shadow_offset), radius=radius, fill=(0, 0, 0, 80))
+        overlay_draw.rounded_rectangle((x + metrics["shadow_offset"], y + metrics["shadow_offset"], x + box_w + metrics["shadow_offset"], y + box_h + metrics["shadow_offset"]), radius=metrics["radius"], fill=(0, 0, 0, 80))
 
     fill_color = ImageColor.getrgb(badge_color)
     alpha = int(255 * max(0.05, opacity))
-    overlay_draw.rounded_rectangle((x, y, x + box_w, y + box_h), radius=radius, fill=(fill_color[0], fill_color[1], fill_color[2], alpha))
+    overlay_draw.rounded_rectangle((x, y, x + box_w, y + box_h), radius=metrics["radius"], fill=(fill_color[0], fill_color[1], fill_color[2], alpha))
 
-    if border_width > 0:
+    if metrics["border_width"] > 0:
         border_rgb = ImageColor.getrgb(border_color)
-        overlay_draw.rounded_rectangle((x, y, x + box_w, y + box_h), radius=radius, outline=(border_rgb[0], border_rgb[1], border_rgb[2], alpha), width=border_width)
+        overlay_draw.rounded_rectangle((x, y, x + box_w, y + box_h), radius=metrics["radius"], outline=(border_rgb[0], border_rgb[1], border_rgb[2], alpha), width=metrics["border_width"])
 
-    overlay_draw.text((x + padding_x, y + padding_y), text, fill=(ImageColor.getrgb(text_color)[0], ImageColor.getrgb(text_color)[1], ImageColor.getrgb(text_color)[2], 255), font=font)
+    text_x = x + metrics["padding_x"] - bbox[0]
+    text_y = y + (box_h - text_h) // 2 - bbox[1]
+    overlay_draw.text((text_x, text_y), text, fill=(ImageColor.getrgb(text_color)[0], ImageColor.getrgb(text_color)[1], ImageColor.getrgb(text_color)[2], 255), font=font)
 
     img = Image.alpha_composite(img, overlay)
     return img.convert("RGB")
@@ -455,4 +503,4 @@ def generate_images():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="127.0.0.1", port=5000, ssl_context="adhoc")
