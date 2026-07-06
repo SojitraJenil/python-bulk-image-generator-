@@ -1,0 +1,927 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk Promo Image Generator - AI Creative Suite{% endblock %}
+
+{% block content %}
+<div class="tool-layout">
+  <!-- Left Column: Controls Card -->
+  <form id="promoForm" enctype="multipart/form-data" class="glass-card">
+    <div class="glass-card-header">
+      <h3 class="glass-card-title">
+        <i data-lucide="sliders-horizontal"></i>
+        <span>Generator Configurations</span>
+      </h3>
+      <span class="tool-badge active" style="font-size: 0.75rem;">
+        <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Live Sync
+      </span>
+    </div>
+    
+    <!-- Step 1: Upload Product Image -->
+    <div class="form-section">
+      <h4 class="form-section-title">1. Source Assets</h4>
+      <div class="form-group">
+        <label>Upload Base Product Image</label>
+        <div id="uploadZone" class="upload-zone" tabindex="0">
+          <div class="upload-icon">
+            <i data-lucide="upload-cloud"></i>
+          </div>
+          <p><span>Click to browse</span> or drag and drop image here</p>
+          <div class="hint">Supports JPG, JPEG, PNG, or WEBP (Max 16 MB)</div>
+          <div id="fileMeta" class="hint" style="font-weight:600;margin-top:6px;color:var(--text-secondary);">No file loaded</div>
+        </div>
+        <input id="imageInput" name="image" type="file" accept="image/jpeg,image/png,image/webp" required style="display:none;" />
+      </div>
+    </div>
+    
+    <!-- Step 2: Output Options -->
+    <div class="form-section">
+      <h4 class="form-section-title">2. Output Preset</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="imageCount">Image Batch Count</label>
+          <input id="imageCount" name="image_count" type="number" min="1" max="100" value="12" />
+          <div class="hint">Number of files to generate</div>
+        </div>
+        <div class="form-group">
+          <label for="outputPreset">Size Preset (Meesho)</label>
+          <select id="outputPreset" name="output_preset">
+            <option value="original">Original Size</option>
+            <option value="meesho_square">Meesho Square (1080×1080)</option>
+            <option value="meesho_portrait">Meesho Portrait (1080×1350)</option>
+            <option value="meesho_story">Meesho Story (1080×1920)</option>
+            <option value="meesho_banner">Meesho Banner (1080×540)</option>
+          </select>
+          <div class="hint">Forces target dimensions</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Promo Badge Layout -->
+    <div class="form-section">
+      <h4 class="form-section-title">3. Promotional Badge Layout</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="labelMode">Labels Generation Mode</label>
+          <select id="labelMode" name="label_mode">
+            <option value="default">Use default labels list</option>
+            <option value="custom">Define custom labels list</option>
+            <option value="auto">Auto-generate names</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="badgePosition">Badge Placement</label>
+          <select id="badgePosition" name="badge_position">
+            <option value="top-left">Top Left</option>
+            <option value="top-right">Top Right</option>
+            <option value="bottom-left">Bottom Left</option>
+            <option value="bottom-right">Bottom Right</option>
+            <option value="center">Center</option>
+            <option value="top-center">Top Center</option>
+            <option value="bottom-center">Bottom Center</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Custom Labels Multi-Row List Editor (Hidden by default unless selected) -->
+      <div class="form-group" id="customLabelsPane" style="display:none; margin-bottom: 24px;">
+        <label style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Custom Text List Entries</span>
+        </label>
+        <div class="label-rows-header">
+          <span>Text Tag</span>
+          <span>Badge BG</span>
+          <span>Text Color</span>
+          <span style="text-align:right;">Delete</span>
+        </div>
+        <div id="labelsContainer"></div>
+        <div style="display:flex;gap:12px;margin-top:12px;">
+          <button type="button" class="btn btn-secondary" id="addLabelBtn" style="flex:1;">
+            <i data-lucide="plus" style="width:16px;height:16px;"></i> Add Row
+          </button>
+          <button type="button" class="btn btn-secondary" id="randomLabelBtn" style="flex:1;">
+            <i data-lucide="shuffle" style="width:16px;height:16px;"></i> Cycle Preview
+          </button>
+        </div>
+        <textarea id="labelsTextarea" name="labels" style="display:none;"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="badgeText">Fallback Badge Text</label>
+          <input id="badgeText" name="badge_text" type="text" value="SALE" />
+        </div>
+        <div class="form-group">
+          <label for="badgeFontSize">Font Size (Base)</label>
+          <input id="badgeFontSize" name="badge_font_size" type="number" min="14" max="96" value="44" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="badgeBackground">Badge BG Color</label>
+          <div class="color-picker-group">
+            <div class="color-input-wrapper">
+              <input id="badgeBackground" name="badge_background" type="color" value="#e53935" />
+            </div>
+            <span id="badgeBgHex" style="font-size:0.875rem;font-family:monospace;font-weight:600;color:var(--text-secondary);">#e53935</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="badgeTextColor">Badge Text Color</label>
+          <div class="color-picker-group">
+            <div class="color-input-wrapper">
+              <input id="badgeTextColor" name="badge_text_color" type="color" value="#ffffff" />
+            </div>
+            <span id="badgeTextHex" style="font-size:0.875rem;font-family:monospace;font-weight:600;color:var(--text-secondary);">#ffffff</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="badgeOpacity">Badge Translucency (Opacity)</label>
+          <input id="badgeOpacity" name="badge_opacity" type="range" min="0.1" max="1" step="0.05" value="0.95" />
+        </div>
+        <div class="form-group">
+          <label for="badgeRadius">Badge Corners Radius</label>
+          <input id="badgeRadius" name="badge_radius" type="number" min="0" max="60" value="18" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="badgePaddingX">Padding X (Horizontal)</label>
+          <input id="badgePaddingX" name="badge_padding_x" type="number" min="6" max="80" value="24" />
+        </div>
+        <div class="form-group">
+          <label for="badgePaddingY">Padding Y (Vertical)</label>
+          <input id="badgePaddingY" name="badge_padding_y" type="number" min="6" max="80" value="16" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="badgeMargin">Layout Margins</label>
+          <input id="badgeMargin" name="badge_margin" type="number" min="6" max="120" value="24" />
+        </div>
+        <div class="form-group">
+          <label for="badgeBorderWidth">Badge Border Outline</label>
+          <input id="badgeBorderWidth" name="badge_border_width" type="number" min="0" max="12" value="1" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="badgeBorderColor">Badge Border Color</label>
+          <div class="color-picker-group">
+            <div class="color-input-wrapper">
+              <input id="badgeBorderColor" name="badge_border_color" type="color" value="#ffffff" />
+            </div>
+            <span id="badgeBorderHex" style="font-size:0.875rem;font-family:monospace;font-weight:600;color:var(--text-secondary);">#ffffff</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="switch-container" style="margin-top:24px;">
+            <span class="switch-label">Drop Soft Shadow</span>
+            <label class="switch">
+              <input id="badgeShadow" name="badge_shadow" type="checkbox" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Outer Frame Borders -->
+    <div class="form-section">
+      <h4 class="form-section-title">4. Decorative Frame Borders</h4>
+      <div class="switch-container">
+        <span class="switch-label">Enable Outer Image Border</span>
+        <label class="switch">
+          <input id="borderEnabled" name="border_enabled" type="checkbox" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div id="borderControlsPane">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="borderWidth">Border Thickness (px)</label>
+            <input id="borderWidth" name="border_width" type="number" min="0" max="40" value="8" />
+          </div>
+          <div class="form-group">
+            <label for="borderRadius">Border Corners Radius</label>
+            <input id="borderRadius" name="border_radius" type="number" min="0" max="80" value="18" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="borderColor">Border Color</label>
+            <div class="color-picker-group">
+              <div class="color-input-wrapper">
+                <input id="borderColor" name="border_color" type="color" value="#ffffff" />
+              </div>
+              <span id="borderHex" style="font-size:0.875rem;font-family:monospace;font-weight:600;color:var(--text-secondary);">#ffffff</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="borderStyle">Frame Stroke Style</label>
+            <select id="borderStyle" name="border_style">
+              <option value="solid">Solid Stroke</option>
+              <option value="double">Double Stroke</option>
+              <option value="dashed">Dashed Lines</option>
+              <option value="dotted">Dotted Circles</option>
+              <option value="gradient">Gradient Border</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: Global Color Theme Settings (Page Accent) -->
+    <div class="form-section">
+      <h4 class="form-section-title">5. Suite Aesthetic</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pageThemeColor">UI Accent Highlight</label>
+          <div class="color-picker-group">
+            <div class="color-input-wrapper">
+              <input id="pageThemeColor" name="page_theme_color" type="color" value="#4f46e5" />
+            </div>
+            <span id="pageThemeHex" style="font-size:0.875rem;font-family:monospace;font-weight:600;color:var(--text-secondary);">#4f46e5</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display:flex;gap:16px;margin-top:32px;">
+      <button type="submit" id="submitBtn" class="btn btn-primary" style="flex:2;" disabled>
+        <i data-lucide="download"></i>
+        <span>Generate ZIP Bundle</span>
+      </button>
+      <button type="button" id="resetBtn" class="btn btn-secondary" style="flex:1;">
+        <i data-lucide="rotate-ccw"></i>
+        <span>Reset Defaults</span>
+      </button>
+    </div>
+
+    <!-- Generation Progress Area -->
+    <div id="progressArea" class="progress-container" style="display:none;">
+      <div class="progress-info">
+        <span id="progressStatus">Initializing renderer...</span>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div id="progressFill" class="progress-bar-fill"></div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Right Column: Sticky Preview Pane -->
+  <div class="sticky-pane">
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <h3 class="glass-card-title">
+          <i data-lucide="eye"></i>
+          <span>Live Canvas Workspace</span>
+        </h3>
+      </div>
+      
+      <!-- Canvas Wrapper -->
+      <div class="preview-pane" id="previewBox">
+        <div id="emptyPreview" class="preview-empty-state">
+          <i data-lucide="image" style="width:48px;height:48px;stroke-width:1.5;"></i>
+          <p>Please load a base product image to activate canvas preview</p>
+        </div>
+        <canvas id="previewCanvas" width="900" height="600"></canvas>
+      </div>
+
+      <!-- Preview Zoom Control -->
+      <div class="form-group" style="margin-top:20px;">
+        <label for="previewZoom" style="display:flex;justify-content:space-between;">
+          <span>Preview Render Zoom</span>
+          <span id="zoomPercent" style="font-weight:700;color:var(--accent-color);">100%</span>
+        </label>
+        <input id="previewZoom" type="range" min="0.7" max="1.4" step="0.05" value="1" />
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const form = document.getElementById('promoForm');
+  const imageInput = document.getElementById('imageInput');
+  const uploadZone = document.getElementById('uploadZone');
+  const fileMeta = document.getElementById('fileMeta');
+  const labelsContainer = document.getElementById('labelsContainer');
+  const labelsTextarea = document.getElementById('labelsTextarea');
+  const addLabelBtn = document.getElementById('addLabelBtn');
+  const randomLabelBtn = document.getElementById('randomLabelBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const progressArea = document.getElementById('progressArea');
+  const progressStatus = document.getElementById('progressStatus');
+  const progressPercent = document.getElementById('progressPercent');
+  const progressFill = document.getElementById('progressFill');
+  const previewCanvas = document.getElementById('previewCanvas');
+  const emptyPreview = document.getElementById('emptyPreview');
+  const previewZoom = document.getElementById('previewZoom');
+  const zoomPercent = document.getElementById('zoomPercent');
+  const pageThemeColor = document.getElementById('pageThemeColor');
+  const labelMode = document.getElementById('labelMode');
+  const borderEnabled = document.getElementById('borderEnabled');
+  const borderControlsPane = document.getElementById('borderControlsPane');
+  const customLabelsPane = document.getElementById('customLabelsPane');
+
+  let uploadedImage = null;
+  let previewImage = null;
+  let previewLabel = null;
+  
+  const defaultRows = [
+    { text: 'SALE', badge: '#e53935', textColor: '#ffffff' },
+    { text: '20% OFF', badge: '#fb8c00', textColor: '#ffffff' }
+  ];
+
+  // Sync color inputs display text
+  function syncColorText(inputId, spanId) {
+    const input = document.getElementById(inputId);
+    const span = document.getElementById(spanId);
+    if (input && span) {
+      span.textContent = input.value.toUpperCase();
+    }
+  }
+
+  function setupColorTextSync(inputId, spanId) {
+    const input = document.getElementById(inputId);
+    if (input) {
+      input.addEventListener('input', () => syncColorText(inputId, spanId));
+      syncColorText(inputId, spanId);
+    }
+  }
+
+  // Toggles the border inputs
+  function toggleBorderControls() {
+    if (borderEnabled.checked) {
+      borderControlsPane.style.display = 'block';
+    } else {
+      borderControlsPane.style.display = 'none';
+    }
+    updatePreview();
+  }
+
+  // Toggles the custom labels box
+  function toggleLabelModeControls() {
+    if (labelMode.value === 'custom') {
+      customLabelsPane.style.display = 'block';
+    } else {
+      customLabelsPane.style.display = 'none';
+    }
+    updatePreview();
+  }
+
+  function createLabelRow(label = {}) {
+    const row = document.createElement('div');
+    row.className = 'label-row';
+    const rowId = 'color-row-' + Math.random().toString(36).substr(2, 9);
+    row.innerHTML = `
+      <input type="text" class="label-text" placeholder="e.g. 50% OFF" value="${label.text || ''}" />
+      <div class="color-picker-group">
+        <div class="color-input-wrapper">
+          <input type="color" class="label-badge" value="${label.badge || '#e53935'}" />
+        </div>
+      </div>
+      <div class="color-picker-group">
+        <div class="color-input-wrapper">
+          <input type="color" class="label-text-color" value="${label.textColor || '#ffffff'}" />
+        </div>
+      </div>
+      <button type="button" class="btn btn-danger remove-row"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>
+    `;
+    
+    if (window.lucide) {
+      window.lucide.createIcons({
+        nodeList: row.querySelectorAll('[data-lucide]')
+      });
+    }
+
+    row.querySelector('.remove-row').addEventListener('click', () => {
+      row.remove();
+      syncLabelTextarea();
+      updatePreview();
+      showToast('Label row removed', 'info');
+    });
+    
+    row.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', () => {
+        syncLabelTextarea();
+        updatePreview();
+      });
+    });
+
+    return row;
+  }
+
+  function syncLabelTextarea() {
+    const lines = Array.from(labelsContainer.querySelectorAll('.label-row')).map(row => {
+      const text = row.querySelector('.label-text').value.trim();
+      const badge = row.querySelector('.label-badge').value;
+      const textColor = row.querySelector('.label-text-color').value;
+      return text ? `${text}|${badge}|${textColor}` : '';
+    }).filter(Boolean);
+    labelsTextarea.value = lines.join('\n');
+  }
+
+  function populateLabelRows(rows = defaultRows) {
+    labelsContainer.innerHTML = '';
+    rows.forEach(row => labelsContainer.appendChild(createLabelRow(row)));
+    syncLabelTextarea();
+  }
+
+  function getLabels() {
+    const rows = Array.from(labelsContainer.querySelectorAll('.label-row'));
+    if (!rows.length) {
+      return defaultRows;
+    }
+    return rows.map(row => ({
+      text: row.querySelector('.label-text').value.trim() || 'SALE',
+      badge: row.querySelector('.label-badge').value,
+      textColor: row.querySelector('.label-text-color').value
+    }));
+  }
+
+  function getPreviewLabel() {
+    if (previewLabel) {
+      return previewLabel;
+    }
+    const labels = getLabels();
+    return labels[0] || defaultRows[0];
+  }
+
+  function setPreviewLabel(label) {
+    previewLabel = label ? { ...label } : null;
+    if (previewLabel) {
+      document.getElementById('badgeText').value = previewLabel.text || '';
+      document.getElementById('badgeBackground').value = previewLabel.badge || '#e53935';
+      document.getElementById('badgeTextColor').value = previewLabel.textColor || '#ffffff';
+      
+      syncColorText('badgeBackground', 'badgeBgHex');
+      syncColorText('badgeTextColor', 'badgeTextHex');
+    }
+    updatePreview();
+  }
+
+  function updateThemeColor() {
+    document.documentElement.style.setProperty('--accent-color', pageThemeColor.value);
+    document.documentElement.style.setProperty('--accent-hover', pageThemeColor.value);
+    document.getElementById('pageThemeHex').textContent = pageThemeColor.value.toUpperCase();
+  }
+
+  function getPresetOutputSize(width, height, preset) {
+    if (preset === 'meesho_square') return { width: 1080, height: 1080 };
+    if (preset === 'meesho_portrait') return { width: 1080, height: 1350 };
+    if (preset === 'meesho_story') return { width: 1080, height: 1920 };
+    if (preset === 'meesho_banner') return { width: 1080, height: 540 };
+    return { width, height };
+  }
+
+  function getBadgeMetrics(width, height, text, baseFontSize, basePaddingX, basePaddingY, baseRadius, baseMargin, baseBorderWidth) {
+    if (!text) {
+      return {
+        fontSize: Math.max(20, Math.round(Math.min(width, height) * 0.04)),
+        paddingX: Math.max(12, Math.round(Math.min(width, height) * 0.02)),
+        paddingY: Math.max(8, Math.round(Math.min(width, height) * 0.012)),
+        radius: Math.max(6, Math.round(Math.min(width, height) * 0.012)),
+        margin: Math.max(10, Math.round(Math.min(width, height) * 0.016)),
+        borderWidth: Math.max(1, Math.round(Math.min(width, height) * 0.002)),
+        shadowOffset: Math.max(4, Math.round(Math.min(width, height) * 0.008))
+      };
+    }
+
+    const minSide = Math.min(width, height);
+    const textLengthFactor = Math.min(1, Math.max(0.2, text.length / 24));
+    const fontSize = Math.max(Math.round(baseFontSize * 0.9), Math.round(width * 0.055), 24);
+    const paddingX = Math.max(18, Math.round(width * 0.032));
+    const paddingY = Math.max(12, Math.round(minSide * 0.017));
+    const radius = Math.max(10, Math.round(minSide * 0.018));
+    const margin = Math.max(12, Math.round(minSide * 0.02));
+    const borderWidth = Math.max(1, Math.round(minSide * 0.002));
+    const shadowOffset = Math.max(5, Math.round(minSide * 0.008));
+    const targetWidthRatio = 0.22 + Math.min(0.12, textLengthFactor * 0.12);
+    const targetBoxWidth = Math.max(Math.round(width * 0.22), Math.round(width * Math.min(0.35, targetWidthRatio)));
+
+    return { fontSize, paddingX, paddingY, radius, margin, borderWidth, shadowOffset, targetBoxWidth };
+  }
+
+  function drawPreview() {
+    const ctx = previewCanvas.getContext('2d');
+    ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    
+    // Draw nice background grid/backdrop
+    ctx.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#f3f4f6';
+    ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+    if (!previewImage) {
+      emptyPreview.style.display = 'flex';
+      previewCanvas.style.display = 'none';
+      return;
+    }
+
+    emptyPreview.style.display = 'none';
+    previewCanvas.style.display = 'block';
+
+    const preset = document.getElementById('outputPreset').value;
+    const outputSize = getPresetOutputSize(previewImage.width, previewImage.height, preset);
+    const renderCanvas = document.createElement('canvas');
+    renderCanvas.width = outputSize.width;
+    renderCanvas.height = outputSize.height;
+    const renderCtx = renderCanvas.getContext('2d');
+    
+    // Base white canvas
+    renderCtx.fillStyle = '#ffffff';
+    renderCtx.fillRect(0, 0, renderCanvas.width, renderCanvas.height);
+
+    // Aspect ratio placement
+    const sourceRatio = previewImage.width / previewImage.height;
+    const targetRatio = outputSize.width / outputSize.height;
+    let drawWidth = outputSize.width;
+    let drawHeight = Math.max(1, Math.round(outputSize.width / sourceRatio));
+    
+    if (drawHeight > outputSize.height) {
+      drawHeight = outputSize.height;
+      drawWidth = Math.max(1, Math.round(outputSize.height * sourceRatio));
+    }
+    const offsetX = Math.round((outputSize.width - drawWidth) / 2);
+    const offsetY = Math.round((outputSize.height - drawHeight) / 2);
+    
+    // Render product image onto virtual canvas
+    renderCtx.drawImage(previewImage, 0, 0, previewImage.width, previewImage.height, offsetX, offsetY, drawWidth, drawHeight);
+
+    // Border layer
+    if (borderEnabled.checked) {
+      const borderColor = document.getElementById('borderColor').value;
+      const borderWidth = parseInt(document.getElementById('borderWidth').value || '0', 10);
+      const borderRadius = parseInt(document.getElementById('borderRadius').value || '0', 10);
+      const borderStyle = document.getElementById('borderStyle').value;
+      
+      renderCtx.save();
+      renderCtx.strokeStyle = borderColor;
+      renderCtx.lineWidth = borderWidth;
+      
+      if (borderStyle === 'double' && borderWidth >= 4) {
+        // Double borders
+        renderCtx.beginPath();
+        renderCtx.roundRect(1, 1, renderCanvas.width - 2, renderCanvas.height - 2, borderRadius);
+        renderCtx.stroke();
+        
+        renderCtx.beginPath();
+        renderCtx.roundRect(borderWidth + 2, borderWidth + 2, renderCanvas.width - (borderWidth * 2) - 4, renderCanvas.height - (borderWidth * 2) - 4, Math.max(0, borderRadius - borderWidth));
+        renderCtx.stroke();
+      } else if (borderStyle === 'dashed') {
+        renderCtx.setLineDash([borderWidth * 2, borderWidth * 2]);
+        renderCtx.beginPath();
+        renderCtx.roundRect(borderWidth / 2, borderWidth / 2, renderCanvas.width - borderWidth, renderCanvas.height - borderWidth, borderRadius);
+        renderCtx.stroke();
+      } else if (borderStyle === 'dotted') {
+        renderCtx.setLineDash([borderWidth / 2, borderWidth * 1.5]);
+        renderCtx.beginPath();
+        renderCtx.roundRect(borderWidth / 2, borderWidth / 2, renderCanvas.width - borderWidth, renderCanvas.height - borderWidth, borderRadius);
+        renderCtx.stroke();
+      } else if (borderStyle === 'gradient') {
+        // Gradient simulation
+        const grad = renderCtx.createLinearGradient(0, 0, renderCanvas.width, renderCanvas.height);
+        grad.addColorStop(0, borderColor);
+        grad.addColorStop(1, '#ffffff');
+        renderCtx.strokeStyle = grad;
+        renderCtx.beginPath();
+        renderCtx.roundRect(borderWidth / 2, borderWidth / 2, renderCanvas.width - borderWidth, renderCanvas.height - borderWidth, borderRadius);
+        renderCtx.stroke();
+      } else {
+        // Solid normal
+        renderCtx.beginPath();
+        renderCtx.roundRect(borderWidth / 2, borderWidth / 2, renderCanvas.width - borderWidth, renderCanvas.height - borderWidth, borderRadius);
+        renderCtx.stroke();
+      }
+      renderCtx.restore();
+    }
+
+    // Badge label layer
+    const label = getPreviewLabel();
+    const badgeBackground = document.getElementById('badgeBackground').value;
+    const badgeTextColor = document.getElementById('badgeTextColor').value;
+    const badgeFontSize = parseInt(document.getElementById('badgeFontSize').value || '44', 10);
+    const badgePaddingX = parseInt(document.getElementById('badgePaddingX').value || '24', 10);
+    const badgePaddingY = parseInt(document.getElementById('badgePaddingY').value || '16', 10);
+    const badgeRadius = parseInt(document.getElementById('badgeRadius').value || '18', 10);
+    const badgeMargin = parseInt(document.getElementById('badgeMargin').value || '24', 10);
+    const badgeBorderColor = document.getElementById('badgeBorderColor').value;
+    const badgeBorderWidth = parseInt(document.getElementById('badgeBorderWidth').value || '1', 10);
+    const badgeOpacity = parseFloat(document.getElementById('badgeOpacity').value || '0.95');
+    const badgePosition = document.getElementById('badgePosition').value;
+    const shadowEnabled = document.getElementById('badgeShadow').checked;
+    
+    // Text fallback
+    const isCustomMode = labelMode.value === 'custom';
+    const text = isCustomMode ? (label.text || 'SALE') : (document.getElementById('badgeText').value.trim() || 'SALE');
+    const finalBg = isCustomMode ? label.badge : badgeBackground;
+    const finalTextColor = isCustomMode ? label.textColor : badgeTextColor;
+
+    const metrics = getBadgeMetrics(outputSize.width, outputSize.height, text, badgeFontSize, badgePaddingX, badgePaddingY, badgeRadius, badgeMargin, badgeBorderWidth);
+    
+    renderCtx.save();
+    renderCtx.font = `bold ${metrics.fontSize}px Arial, sans-serif`;
+    
+    const textWidth = renderCtx.measureText(text).width;
+    const boxW = Math.max(textWidth + metrics.paddingX * 2, metrics.targetBoxWidth);
+    const boxH = metrics.fontSize + metrics.paddingY * 2;
+    
+    let boxX = metrics.margin;
+    let boxY = metrics.margin;
+    
+    if (badgePosition === 'top-right') {
+      boxX = outputSize.width - boxW - metrics.margin;
+    } else if (badgePosition === 'bottom-left') {
+      boxY = outputSize.height - boxH - metrics.margin;
+    } else if (badgePosition === 'bottom-right') {
+      boxX = outputSize.width - boxW - metrics.margin;
+      boxY = outputSize.height - boxH - metrics.margin;
+    } else if (badgePosition === 'center') {
+      boxX = (outputSize.width - boxW) / 2;
+      boxY = (outputSize.height - boxH) / 2;
+    } else if (badgePosition === 'top-center') {
+      boxX = (outputSize.width - boxW) / 2;
+      boxY = metrics.margin;
+    } else if (badgePosition === 'bottom-center') {
+      boxX = (outputSize.width - boxW) / 2;
+      boxY = outputSize.height - boxH - metrics.margin;
+    }
+
+    if (shadowEnabled) {
+      renderCtx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      renderCtx.shadowBlur = metrics.shadowOffset * 1.5;
+      renderCtx.shadowOffsetX = metrics.shadowOffset * 0.5;
+      renderCtx.shadowOffsetY = metrics.shadowOffset * 0.8;
+    }
+
+    renderCtx.globalAlpha = badgeOpacity;
+    renderCtx.fillStyle = finalBg;
+    renderCtx.beginPath();
+    renderCtx.roundRect(boxX, boxY, boxW, boxH, metrics.radius);
+    renderCtx.fill();
+    
+    // Reset shadow for outline / text
+    renderCtx.shadowColor = 'transparent';
+    renderCtx.shadowBlur = 0;
+    renderCtx.shadowOffsetX = 0;
+    renderCtx.shadowOffsetY = 0;
+    renderCtx.globalAlpha = 1.0;
+
+    if (metrics.borderWidth > 0) {
+      renderCtx.save();
+      renderCtx.globalAlpha = badgeOpacity;
+      renderCtx.strokeStyle = badgeBorderColor;
+      renderCtx.lineWidth = metrics.borderWidth;
+      renderCtx.beginPath();
+      renderCtx.roundRect(boxX, boxY, boxW, boxH, metrics.radius);
+      renderCtx.stroke();
+      renderCtx.restore();
+    }
+
+    // Text rendering alignment
+    renderCtx.fillStyle = finalTextColor;
+    renderCtx.textBaseline = 'middle';
+    renderCtx.fillText(text, boxX + (boxW - textWidth) / 2, boxY + boxH / 2 + 1);
+    renderCtx.restore();
+
+    // Render scales onto physical preview canvas
+    const zoom = parseFloat(previewZoom.value || 1);
+    const canvasW = previewCanvas.width;
+    const canvasH = previewCanvas.height;
+    const maxW = canvasW - 60;
+    const maxH = canvasH - 60;
+    const displayScale = Math.min(maxW / renderCanvas.width, maxH / renderCanvas.height, zoom);
+    
+    const displayW = renderCanvas.width * displayScale;
+    const displayH = renderCanvas.height * displayScale;
+    
+    const x = (canvasW - displayW) / 2;
+    const y = (canvasH - displayH) / 2;
+    
+    ctx.drawImage(renderCanvas, x, y, displayW, displayH);
+  }
+
+  function updatePreview() {
+    drawPreview();
+  }
+
+  function handleFileSelect(file) {
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type) && !/\.(jpe?g|png|webp)$/i.test(file.name)) {
+      showToast('Unsupported file. Please upload JPG, PNG, or WEBP.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      previewImage = new Image();
+      previewImage.onload = updatePreview;
+      previewImage.src = e.target.result;
+      uploadedImage = file;
+      
+      fileMeta.textContent = `${file.name} • ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+      submitBtn.disabled = false;
+      showToast('Product Image loaded successfully', 'success');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Upload Zone listeners
+  imageInput.addEventListener('change', (event) => {
+    handleFileSelect(event.target.files[0]);
+  });
+
+  uploadZone.addEventListener('click', () => imageInput.click());
+  uploadZone.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      imageInput.click();
+    }
+  });
+
+  uploadZone.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    uploadZone.classList.add('dragover');
+  });
+  uploadZone.addEventListener('dragleave', () => {
+    uploadZone.classList.remove('dragover');
+  });
+  uploadZone.addEventListener('drop', (event) => {
+    event.preventDefault();
+    uploadZone.classList.remove('dragover');
+    handleFileSelect(event.dataTransfer.files[0]);
+  });
+
+  addLabelBtn.addEventListener('click', () => {
+    labelsContainer.appendChild(createLabelRow({ text: '', badge: '#4f46e5', textColor: '#ffffff' }));
+    syncLabelTextarea();
+    updatePreview();
+    showToast('Empty label row added', 'info');
+  });
+
+  randomLabelBtn.addEventListener('click', () => {
+    const labels = getLabels();
+    if (!labels.length) {
+      showToast('Please add label rows first', 'error');
+      return;
+    }
+    const label = labels[Math.floor(Math.random() * labels.length)];
+    setPreviewLabel(label);
+    showToast(`Now previewing row: "${label.text}"`, 'info');
+  });
+
+  // Toggles and Select updates
+  labelMode.addEventListener('change', toggleLabelModeControls);
+  borderEnabled.addEventListener('change', toggleBorderControls);
+  previewZoom.addEventListener('input', () => {
+    zoomPercent.textContent = `${Math.round(previewZoom.value * 100)}%`;
+    updatePreview();
+  });
+
+  // Set up listeners on all inputs for instant preview updates
+  document.querySelectorAll('form input, form select, form textarea').forEach(el => {
+    if (el.id !== 'imageInput' && el.id !== 'previewZoom') {
+      el.addEventListener('input', updatePreview);
+      el.addEventListener('change', updatePreview);
+    }
+  });
+
+  // Reset defaults
+  resetBtn.addEventListener('click', () => {
+    form.reset();
+    document.getElementById('imageCount').value = '12';
+    document.getElementById('badgeFontSize').value = '44';
+    document.getElementById('badgeOpacity').value = '0.95';
+    document.getElementById('badgePaddingX').value = '24';
+    document.getElementById('badgePaddingY').value = '16';
+    document.getElementById('badgeRadius').value = '18';
+    document.getElementById('badgeMargin').value = '24';
+    document.getElementById('badgeBorderWidth').value = '1';
+    document.getElementById('borderWidth').value = '8';
+    document.getElementById('borderRadius').value = '18';
+    document.getElementById('previewZoom').value = '1';
+    zoomPercent.textContent = '100%';
+    document.getElementById('badgeShadow').checked = true;
+    borderEnabled.checked = true;
+    pageThemeColor.value = '#4f46e5';
+    
+    updateThemeColor();
+    toggleBorderControls();
+    toggleLabelModeControls();
+    populateLabelRows(defaultRows);
+    
+    // Reset colors spans
+    syncColorText('badgeBackground', 'badgeBgHex');
+    syncColorText('badgeTextColor', 'badgeTextHex');
+    syncColorText('badgeBorderColor', 'badgeBorderHex');
+    syncColorText('borderColor', 'borderHex');
+    syncColorText('pageThemeColor', 'pageThemeHex');
+
+    previewLabel = null;
+    previewImage = null;
+    uploadedImage = null;
+    fileMeta.textContent = 'No file loaded';
+    submitBtn.disabled = true;
+    progressArea.style.display = 'none';
+    
+    drawPreview();
+    showToast('Configurations reset to defaults', 'info');
+  });
+
+  // Form AJAX submission
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!uploadedImage) {
+      showToast('Please upload a base product image first', 'error');
+      return;
+    }
+
+    syncLabelTextarea();
+    submitBtn.disabled = true;
+    const originalText = submitBtn.querySelector('span').textContent;
+    submitBtn.innerHTML = '<span class="spinner"></span> <span>Rendering batch...</span>';
+    
+    progressArea.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressPercent.textContent = '0%';
+    progressStatus.textContent = 'Preparing base assets...';
+
+    let progress = 0;
+    const maxVal = parseInt(document.getElementById('imageCount').value || '12', 10);
+    
+    const interval = window.setInterval(() => {
+      progress = Math.min(92, progress + Math.floor(Math.random() * 8) + 4);
+      progressFill.style.width = `${progress}%`;
+      progressPercent.textContent = `${progress}%`;
+      progressStatus.textContent = progress < 30 ? 'Resizing and rendering borders...' : progress < 70 ? `Adding banners to ${maxVal} images...` : 'Building ZIP folder compression...';
+    }, 300);
+
+    const formData = new FormData(form);
+    formData.set('labels', labelsTextarea.value);
+
+    try {
+      const response = await fetch("{{ url_for('bulk_image.generate_images') }}", {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: 'Rendering backend process aborted.' }));
+        throw new Error(payload.error || 'Rendering process failed.');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'promo_images.zip';
+      link.click();
+      window.URL.revokeObjectURL(url);
+      
+      progressFill.style.width = '100%';
+      progressPercent.textContent = '100%';
+      progressStatus.textContent = 'ZIP download initiated!';
+      showToast('Successfully downloaded ZIP bundle!', 'success');
+    } catch (error) {
+      showToast(error.message || 'Unexpected rendering fault occurred.', 'error');
+    } finally {
+      window.clearInterval(interval);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<i data-lucide="download"></i> <span>${originalText}</span>`;
+      if (window.lucide) {
+        window.lucide.createIcons({
+          nodeList: submitBtn.querySelectorAll('[data-lucide]')
+        });
+      }
+      setTimeout(() => {
+        progressArea.style.display = 'none';
+      }, 3000);
+    }
+  });
+
+  // Initialization calls
+  setupColorTextSync('badgeBackground', 'badgeBgHex');
+  setupColorTextSync('badgeTextColor', 'badgeTextHex');
+  setupColorTextSync('badgeBorderColor', 'badgeBorderHex');
+  setupColorTextSync('borderColor', 'borderHex');
+  setupColorTextSync('pageThemeColor', 'pageThemeHex');
+  pageThemeColor.addEventListener('input', updateThemeColor);
+
+  populateLabelRows(defaultRows);
+  updateThemeColor();
+  toggleBorderControls();
+  toggleLabelModeControls();
+  drawPreview();
+</script>
+{% endblock %}

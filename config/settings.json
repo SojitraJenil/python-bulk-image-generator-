@@ -1,0 +1,23 @@
+{
+  "enable_pose_library": true,
+  "enable_bg_generator": true,
+  "enable_custom_prompt": true,
+  "enable_batch_gen": true,
+  "enable_face_preservation": true,
+  "enable_upscaling": true,
+  "enable_zip_download": true,
+  "enable_preview": true,
+  "enable_gpu": false,
+  "enable_experimental": false,
+  
+  "default_quality": "High",
+  "default_pose": "Standing",
+  "default_format": "PNG",
+  "max_images": 20,
+  "max_upload_size": 16,
+  "allowed_formats": [".jpg", ".jpeg", ".png", ".webp"],
+  "ai_model": "Stable Diffusion XL",
+  "random_seed": "",
+  "auto_cleanup": true,
+  "gpu_mode": "CPU"
+}

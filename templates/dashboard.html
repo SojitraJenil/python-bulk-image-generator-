@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - AI Creative Suite{% endblock %}
+
+{% block content %}
+<!-- Welcome Hero Card -->
+<div class="welcome-hero">
+  <h1 class="welcome-title">Welcome to E commerce Helping Platform</h1>
+  <p class="welcome-subtitle">
+    Supercharge your creative workflow and e-commerce listings with state-of-the-art AI design utilities. Generate,
+    modify, scale, and optimize product assets inside a unified workspace.
+  </p>
+</div>
+
+<!-- Tools Directory Section -->
+<div class="section-header">
+  <h2 class="section-title">
+    <i data-lucide="grid"></i>
+    <span>Available AI Design Tools</span>
+  </h2>
+</div>
+
+<div class="tools-grid">
+  <!-- Bulk Image Generator (Active) -->
+  <div class="tool-card">
+    <span class="tool-badge active">
+      <i data-lucide="check" style="width:12px;height:12px;"></i> Ready
+    </span>
+    <div class="tool-icon-wrapper" style="color: var(--accent-color); background-color: var(--accent-light);">
+      <i data-lucide="images"></i>
+    </div>
+    <h3>Bulk Image Generator</h3>
+    <p class="tool-desc">
+      Batch-resize your images, add promotional banners/badges, apply customizable border designs, and download all
+      processed outputs in a single ZIP. Ideal for Meesho and social listings.
+    </p>
+    <a href="{{ url_for('bulk_image.tool_page') }}" class="btn btn-primary">
+      <span>Open Tool</span>
+      <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+    </a>
+  </div>
+
+  <!-- Bulk Auto Listing (Active) -->
+  <div class="tool-card">
+    <span class="tool-badge active">
+      <i data-lucide="check" style="width:12px;height:12px;"></i> Ready
+    </span>
+    <div class="tool-icon-wrapper" style="color: #10b981; background-color: rgba(16, 185, 129, 0.1);">
+      <i data-lucide="upload-cloud"></i>
+    </div>
+    <h3>Bulk Auto Listing</h3>
+    <p class="tool-desc">
+      Auto-publish your rendered listing images directly to e-commerce platforms like Meesho. Install our helper Chrome
+      Extension to automate the catalog listing upload process in 2 minutes.
+    </p>
+    <a href="{{ url_for('main.auto_listing') }}" class="btn btn-primary"
+      style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);">
+      <span>Get Extension</span>
+      <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+    </a>
+  </div>
+
+  <!-- AI Pose Generator — LIVE -->
+  <div class="tool-card">
+    <span class="tool-badge active"><i data-lucide="zap" style="width:11px;height:11px;"></i> Active</span>
+    <div class="tool-icon-wrapper">
+      <i data-lucide="user"></i>
+    </div>
+    <h3>AI Pose Generator</h3>
+    <p class="tool-desc">
+      Create dynamic modeling poses and custom apparel placements from standard product images or text descriptions
+      using high-fidelity diffusion.
+    </p>
+    <a href="{{ url_for('pose_generator.tool_page') }}" class="btn btn-primary">
+      <span>Open Tool</span>
+      <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+    </a>
+  </div>
+
+  <!-- Background Remover (Coming Soon) -->
+  <div class="tool-card">
+    <span class="tool-badge soon">Coming Soon</span>
+    <div class="tool-icon-wrapper">
+      <i data-lucide="image-minus"></i>
+    </div>
+    <h3>Background Remover</h3>
+    <p class="tool-desc">
+      Remove background elements with pixel-level precision. Automatically detect and crop subjects, products, or models
+      in under 2 seconds.
+    </p>
+    <a href="{{ url_for('main.tool_placeholder', tool_name='background-remover') }}" class="btn btn-secondary">
+      <span>Preview Tool</span>
+      <i data-lucide="eye" style="width:16px;height:16px;"></i>
+    </a>
+  </div>
+
+  <!-- AI Product Enhancer (Coming Soon) -->
+  <div class="tool-card">
+    <span class="tool-badge soon">Coming Soon</span>
+    <div class="tool-icon-wrapper">
+      <i data-lucide="sparkles"></i>
+    </div>
+    <h3>AI Product Enhancer</h3>
+    <p class="tool-desc">
+      Place your raw product photos in stunning 3D studios, outdoor scenes, or clean aesthetic backdrops automatically
+      with smart shadows and lighting.
+    </p>
+    <a href="{{ url_for('main.tool_placeholder', tool_name='product-enhancer') }}" class="btn btn-secondary">
+      <span>Preview Tool</span>
+      <i data-lucide="eye" style="width:16px;height:16px;"></i>
+    </a>
+  </div>
+
+  <!-- Image Upscaler (Coming Soon) -->
+  <div class="tool-card">
+    <span class="tool-badge soon">Coming Soon</span>
+    <div class="tool-icon-wrapper">
+      <i data-lucide="maximize"></i>
+    </div>
+    <h3>Image Upscaler</h3>
+    <p class="tool-desc">
+      Enhance low-resolution photos up to 4x. Restore blurry details, reduce compression noise, and output ultra-sharp
+      print-ready graphics.
+    </p>
+    <a href="{{ url_for('main.tool_placeholder', tool_name='image-upscaler') }}" class="btn btn-secondary">
+      <span>Preview Tool</span>
+      <i data-lucide="eye" style="width:16px;height:16px;"></i>
+    </a>
+  </div>
+
+  <!-- Watermark Remover (Coming Soon) -->
+  <div class="tool-card">
+    <span class="tool-badge soon">Coming Soon</span>
+    <div class="tool-icon-wrapper">
+      <i data-lucide="eraser"></i>
+    </div>
+    <h3>Watermark Remover</h3>
+    <p class="tool-desc">
+      Erase text overlays, timestamps, unwanted logos, or dust stains from stock photos without altering original
+      backgrounds.
+    </p>
+    <a href="{{ url_for('main.tool_placeholder', tool_name='watermark-remover') }}" class="btn btn-secondary">
+      <span>Preview Tool</span>
+      <i data-lucide="eye" style="width:16px;height:16px;"></i>
+    </a>
+  </div>
+</div>
+{% endblock %}

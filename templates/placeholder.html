@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - AI Creative Suite{% endblock %}
+
+{% block content %}
+<div class="placeholder-wrapper">
+  <div class="coming-soon-card">
+    <div class="coming-soon-icon">
+      <i data-lucide="{{ icon }}"></i>
+    </div>
+    <span class="coming-soon-badge">Under Development</span>
+    <h1>{{ title }}</h1>
+    <p>{{ description }}</p>
+    <p style="font-size:0.85rem;margin-top:-10px;">
+      Our developers and AI engineers are training the models and crafting the pipeline for this feature.
+    </p>
+    <div style="margin-top:12px;width:100%;">
+      <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary" style="width:100%;">
+        <i data-lucide="arrow-left" style="width:18px;height:18px;"></i>
+        <span>Return to Dashboard</span>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

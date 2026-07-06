@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AI Creative Suite{% endblock %}</title>
+
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <i data-lucide="sparkles" style="width:18px;height:18px;"></i>
+        </div>
+        <span class="sidebar-title">E commerce Helping</span>
+        <button id="sidebarCloseBtn" class="sidebar-close-btn">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <ul class="sidebar-menu">
+        <li class="menu-item {% if active_page == 'dashboard' %}active{% endif %}">
+          <a href="{{ url_for('main.dashboard') }}">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+          </a>
+        </li>
+
+        <li class="menu-section-label">AI Tools</li>
+
+        <li class="menu-item {% if active_page == 'bulk-image' %}active{% endif %}">
+          <a href="{{ url_for('bulk_image.tool_page') }}">
+            <i data-lucide="images"></i>
+            <span>Bulk Image Gen</span>
+          </a>
+        </li>
+
+        <li class="menu-item {% if active_page == 'bulk-auto-listing' %}active{% endif %}">
+          <a href="{{ url_for('main.auto_listing') }}">
+            <i data-lucide="upload-cloud"></i>
+            <span>Bulk Auto Listing</span>
+          </a>
+        </li>
+
+        <li class="menu-item {% if active_page == 'pose-generator' %}active{% endif %}">
+          <a href="{{ url_for('pose_generator.tool_page') }}">
+            <i data-lucide="user"></i>
+            <span>AI Pose Generator</span>
+          </a>
+        </li>
+
+        <li class="menu-item {% if active_page == 'background-remover' %}active{% endif %}">
+          <a href="{{ url_for('main.tool_placeholder', tool_name='background-remover') }}">
+            <i data-lucide="image-minus"></i>
+            <span>BG Remover</span>
+          </a>
+        </li>
+
+        <li class="menu-item {% if active_page == 'product-enhancer' %}active{% endif %}">
+          <a href="{{ url_for('main.tool_placeholder', tool_name='product-enhancer') }}">
+            <i data-lucide="sparkles"></i>
+            <span>AI Enhancer</span>
+          </a>
+        </li>
+
+        <li class="menu-item {% if active_page == 'image-upscaler' %}active{% endif %}">
+          <a href="{{ url_for('main.tool_placeholder', tool_name='image-upscaler') }}">
+            <i data-lucide="maximize"></i>
+            <span>Image Upscaler</span>
+          </a>
+        </li>
+
+        <li class="menu-item {% if active_page == 'watermark-remover' %}active{% endif %}">
+          <a href="{{ url_for('main.tool_placeholder', tool_name='watermark-remover') }}">
+            <i data-lucide="eraser"></i>
+            <span>Watermark Remover</span>
+          </a>
+        </li>
+
+        <li class="menu-section-label">Preferences</li>
+
+        <li class="menu-item {% if active_page == 'settings' %}active{% endif %}">
+          <a href="{{ url_for('main.settings_page') }}">
+            <i data-lucide="settings"></i>
+            <span>Settings</span>
+          </a>
+        </li>
+
+        <li class="menu-item {% if active_page == 'about' %}active{% endif %}">
+          <a href="{{ url_for('main.about_page') }}">
+            <i data-lucide="info"></i>
+            <span>About</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div style="font-size:0.75rem;color:var(--text-muted);text-align:center;">
+          Jennn Prod v1.0.0
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <main class="content-area">
+      <!-- Top Navigation Bar -->
+      <header class="top-navbar">
+        <div class="topbar-left">
+          <button id="sidebarToggleBtn" class="navbar-toggle-btn">
+            <i data-lucide="menu"></i>
+          </button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i data-lucide="cpu" style="color:var(--accent-color);width:20px;height:20px;"></i>
+            <span style="font-family:'Outfit';font-weight:700;font-size:1.1rem;letter-spacing:0.02em;">Creative
+              Engine</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Theme">
+            <i data-lucide="moon" style="width:20px;height:20px;"></i>
+          </button>
+
+          <div class="user-profile">
+            <div class="user-avatar">AD</div>
+            <div class="user-info">
+              <span class="user-name">Jenil Sojitra</span>
+              <span class="user-role">Premium Account</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-container">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Notification Wrapper -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Global Javascript Include -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+
+</html>

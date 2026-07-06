@@ -1,0 +1,515 @@
+{% extends 'base.html' %}
+{% block title %}Image Upscaler - E-Commerce Helping Platform{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Comparison Slider ──────────────────────── */
+  .compare-wrapper {
+    position: relative;
+    width: 100%;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    aspect-ratio: 4/3;
+    user-select: none;
+    cursor: col-resize;
+  }
+  .compare-wrapper img {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; object-fit: contain;
+    pointer-events: none;
+  }
+  #afterImg  { clip-path: inset(0 50% 0 0); }
+  .compare-divider {
+    position: absolute; top: 0; left: 50%; width: 3px; height: 100%;
+    background: white; cursor: col-resize; z-index: 10;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.15), 0 4px 16px rgba(0,0,0,.25);
+    transition: none;
+  }
+  .compare-handle {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 38px; height: 38px; border-radius: 50%;
+    background: white; border: 2px solid var(--accent-color);
+    box-shadow: 0 2px 12px rgba(0,0,0,.25);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .compare-handle svg { width:18px; height:18px; fill:none; stroke:var(--accent-color); stroke-width:2.5; }
+  .compare-label {
+    position: absolute; bottom: 12px;
+    font-size: 0.7rem; font-weight: 800;
+    padding: 4px 10px; border-radius: 99px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .compare-label.orig { left: 12px; background: rgba(0,0,0,.55); color: white; }
+  .compare-label.upscd { right: 12px; background: var(--accent-color); color: white; }
+
+  /* ── Enhancement Toggles ────────────────────── */
+  .enhance-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .enhance-toggle {
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    transition: all 0.2s ease;
+    background: var(--bg-primary);
+  }
+  .enhance-toggle:hover  { border-color: var(--accent-color); background: var(--accent-light); }
+  .enhance-toggle.active { border-color: var(--accent-color); background: var(--accent-light); }
+  .enhance-toggle i { width:18px; height:18px; color: var(--text-muted); flex-shrink:0; }
+  .enhance-toggle.active i { color: var(--accent-color); }
+  .enhance-toggle span { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); line-height: 1.3; }
+  .enhance-toggle.active span { color: var(--accent-color); }
+
+  /* ── Scale Selector ─────────────────────────── */
+  .scale-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .scale-btn {
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--bg-primary);
+  }
+  .scale-btn:hover  { border-color: var(--accent-color); }
+  .scale-btn.active { border-color: var(--accent-color); background: var(--accent-light); }
+  .scale-btn .factor { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); }
+  .scale-btn.active .factor { color: var(--accent-color); }
+  .scale-btn .scale-desc { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; font-weight: 600; }
+
+  /* ── Stats Row ──────────────────────────────── */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .stat-box {
+    background: var(--bg-tertiary); border-radius: 12px; padding: 14px;
+    text-align: center;
+  }
+  .stat-box .val { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); }
+  .stat-box .lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); font-weight: 700; margin-top: 3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tool-layout">
+
+  <!-- ═══════════════════════════════════════════
+       LEFT — Controls
+  ═══════════════════════════════════════════ -->
+  <div class="glass-card">
+    <div class="glass-card-header">
+      <h3 class="glass-card-title">
+        <i data-lucide="maximize"></i>
+        <span>Image Upscaler</span>
+      </h3>
+      <span class="tool-badge active">
+        <i data-lucide="zap" style="width:11px;height:11px;"></i> Active
+      </span>
+    </div>
+
+    <!-- 1. Upload -->
+    <div class="form-section">
+      <h4 class="form-section-title">1. Upload Image</h4>
+      <div class="upload-zone" id="uploadZone" tabindex="0">
+        <div class="upload-icon"><i data-lucide="upload-cloud"></i></div>
+        <p><span>Click to browse</span> or drag & drop</p>
+        <div class="hint">JPG · PNG · WEBP · Max 16 MB</div>
+        <div id="fileMeta" class="hint" style="font-weight:700;margin-top:4px;color:var(--text-secondary);">No file loaded</div>
+      </div>
+      <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+    </div>
+
+    <!-- 2. Scale Factor -->
+    <div class="form-section">
+      <h4 class="form-section-title">2. Upscale Factor</h4>
+      <div class="scale-grid">
+        <div class="scale-btn active" data-scale="2x" onclick="selectScale(this)">
+          <div class="factor">2×</div>
+          <div class="scale-desc">HD</div>
+        </div>
+        <div class="scale-btn" data-scale="3x" onclick="selectScale(this)">
+          <div class="factor">3×</div>
+          <div class="scale-desc">Full HD</div>
+        </div>
+        <div class="scale-btn" data-scale="4x" onclick="selectScale(this)">
+          <div class="factor">4×</div>
+          <div class="scale-desc">Ultra HD</div>
+        </div>
+      </div>
+      <input type="hidden" id="scaleHidden" value="2x">
+    </div>
+
+    <!-- 3. Enhancements -->
+    <div class="form-section">
+      <h4 class="form-section-title">3. Enhancement Options</h4>
+      <div class="enhance-grid">
+        <div class="enhance-toggle active" id="tog_sharp" onclick="toggleEnhance(this,'enhance_sharpness')">
+          <i data-lucide="focus"></i>
+          <span>Sharpen Detail</span>
+        </div>
+        <div class="enhance-toggle" id="tog_contrast" onclick="toggleEnhance(this,'enhance_contrast')">
+          <i data-lucide="contrast"></i>
+          <span>Boost Contrast</span>
+        </div>
+        <div class="enhance-toggle" id="tog_color" onclick="toggleEnhance(this,'enhance_color')">
+          <i data-lucide="palette"></i>
+          <span>Vivid Colors</span>
+        </div>
+        <div class="enhance-toggle" id="tog_denoise" onclick="toggleEnhance(this,'denoise')">
+          <i data-lucide="wind"></i>
+          <span>Noise Reduction</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Output Settings -->
+    <div class="form-section">
+      <h4 class="form-section-title">4. Output Settings</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quality">Processing Quality</label>
+          <select id="quality">
+            <option>Standard</option>
+            <option selected>High</option>
+            <option>Ultra HD</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="output_format">Output Format</label>
+          <select id="output_format">
+            <option>PNG</option>
+            <option>JPG</option>
+            <option>WEBP</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:12px;">
+      <button id="upscaleBtn" class="btn btn-primary" style="flex:2;padding:13px;" disabled>
+        <i data-lucide="maximize" style="width:18px;height:18px;"></i>
+        <span>Upscale Image</span>
+      </button>
+      <button id="resetBtn" type="button" class="btn btn-secondary" style="flex:1;">
+        <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i> Reset
+      </button>
+    </div>
+
+    <!-- Progress -->
+    <div id="progressArea" class="progress-container" style="display:none;margin-top:20px;">
+      <div class="progress-info">
+        <span id="progressStatus">Initialising…</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div id="progressFill" class="progress-bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       RIGHT — Preview & Output
+  ═══════════════════════════════════════════ -->
+  <div class="sticky-pane">
+
+    <!-- Before / After Comparison -->
+    <div class="glass-card" style="margin-bottom:20px;">
+      <div class="glass-card-header">
+        <h3 class="glass-card-title">
+          <i data-lucide="split-square-horizontal"></i>
+          <span>Before / After</span>
+        </h3>
+        <button id="downloadBtn" class="btn btn-primary" style="font-size:0.8rem;padding:7px 16px;display:none;">
+          <i data-lucide="download" style="width:15px;height:15px;"></i> Download
+        </button>
+      </div>
+
+      <!-- Empty state -->
+      <div id="compareEmpty" class="preview-empty-state" style="min-height:260px;">
+        <i data-lucide="maximize" style="width:48px;height:48px;stroke-width:1.5;"></i>
+        <p>Upload an image and click <strong>Upscale Image</strong> to see the result here</p>
+      </div>
+
+      <!-- Slider comparison view -->
+      <div id="compareWrapper" class="compare-wrapper" style="display:none;">
+        <img id="beforeImg" src="" alt="Original">
+        <img id="afterImg"  src="" alt="Upscaled">
+        <div class="compare-divider" id="compareDivider">
+          <div class="compare-handle">
+            <svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg>
+          </div>
+        </div>
+        <span class="compare-label orig">Original</span>
+        <span class="compare-label upscd" id="upscaleLabel">2× Upscaled</span>
+      </div>
+
+      <div id="compareHint" style="display:none;text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:10px;">
+        ← Drag the slider to compare →
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="glass-card">
+      <div class="glass-card-header" style="margin-bottom:14px;">
+        <h3 class="glass-card-title" style="font-size:1rem;">
+          <i data-lucide="bar-chart-2"></i>
+          <span>Image Info</span>
+        </h3>
+      </div>
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="val" id="statOrig">—</div>
+          <div class="lbl">Original Size</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" id="statNew">—</div>
+          <div class="lbl">Upscaled Size</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" id="statFactor">2×</div>
+          <div class="lbl">Scale Factor</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;" class="stat-row">
+        <div class="stat-box">
+          <div class="val" id="statFileSize">—</div>
+          <div class="lbl">Output Size</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" id="statFmt">PNG</div>
+          <div class="lbl">Format</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" id="statEnhances">1</div>
+          <div class="lbl">Enhances</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── State ─────────────────────────────────── */
+let currentFile   = null;
+let resultBlob    = null;
+let enhances      = { enhance_sharpness: true, enhance_contrast: false, enhance_color: false, denoise: false };
+
+/* ── DOM refs ──────────────────────────────── */
+const uploadZone    = document.getElementById('uploadZone');
+const imageInput    = document.getElementById('imageInput');
+const fileMeta      = document.getElementById('fileMeta');
+const upscaleBtn    = document.getElementById('upscaleBtn');
+const resetBtn      = document.getElementById('resetBtn');
+const progressArea  = document.getElementById('progressArea');
+const progressFill  = document.getElementById('progressFill');
+const progressPct   = document.getElementById('progressPct');
+const progressStatus= document.getElementById('progressStatus');
+const compareEmpty  = document.getElementById('compareEmpty');
+const compareWrapper= document.getElementById('compareWrapper');
+const compareHint   = document.getElementById('compareHint');
+const beforeImg     = document.getElementById('beforeImg');
+const afterImg      = document.getElementById('afterImg');
+const compareDivider= document.getElementById('compareDivider');
+const downloadBtn   = document.getElementById('downloadBtn');
+const upscaleLabel  = document.getElementById('upscaleLabel');
+
+/* ── Upload ────────────────────────────────── */
+function handleFile(file) {
+  if (!file) return;
+  const ok = ['image/jpeg','image/png','image/webp'];
+  if (!ok.includes(file.type)) { showToast('Use JPG, PNG or WEBP.', 'error'); return; }
+  currentFile = file;
+  const url = URL.createObjectURL(file);
+  beforeImg.src = url;
+  fileMeta.textContent = `${file.name} • ${(file.size/1024/1024).toFixed(2)} MB`;
+  upscaleBtn.disabled = false;
+
+  // Update orig stat lazily
+  const tmp = new window.Image();
+  tmp.onload = () => { statOrig.textContent = `${tmp.width}×${tmp.height}`; };
+  tmp.src = url;
+  showToast('Image loaded!', 'success');
+}
+imageInput.addEventListener('change', e => handleFile(e.target.files[0]));
+uploadZone.addEventListener('click', () => imageInput.click());
+uploadZone.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' '){e.preventDefault();imageInput.click();}});
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
+
+/* ── Scale picker ──────────────────────────── */
+function selectScale(btn) {
+  document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('scaleHidden').value = btn.dataset.scale;
+  document.getElementById('statFactor').textContent = btn.dataset.scale;
+}
+
+/* ── Enhancement toggles ───────────────────── */
+function toggleEnhance(el, key) {
+  enhances[key] = !enhances[key];
+  el.classList.toggle('active', enhances[key]);
+  document.getElementById('statEnhances').textContent = Object.values(enhances).filter(Boolean).length;
+}
+
+/* ── Upscale ───────────────────────────────── */
+upscaleBtn.addEventListener('click', async () => {
+  if (!currentFile) return;
+
+  const scale   = document.getElementById('scaleHidden').value;
+  const quality = document.getElementById('quality').value;
+  const format  = document.getElementById('output_format').value;
+
+  const fd = new FormData();
+  fd.append('image',           currentFile);
+  fd.append('scale',           scale);
+  fd.append('quality',         quality);
+  fd.append('output_format',   format);
+  fd.append('enhance_sharpness', enhances.enhance_sharpness  ? 'true':'false');
+  fd.append('enhance_contrast',  enhances.enhance_contrast   ? 'true':'false');
+  fd.append('enhance_color',     enhances.enhance_color      ? 'true':'false');
+  fd.append('denoise',           enhances.denoise            ? 'true':'false');
+
+  upscaleBtn.disabled = true;
+  upscaleBtn.innerHTML = '<span class="spinner"></span><span>Upscaling…</span>';
+  progressArea.style.display = 'block';
+  progressFill.style.width = '0%';
+  progressPct.textContent = '0%';
+
+  const steps = [
+    'Loading image data…',
+    'Applying noise reduction…',
+    `Resampling at ${scale} (Lanczos)…`,
+    'Sharpening detail pass…',
+    'Enhancing contrast & colour…',
+    'Encoding output file…'
+  ];
+  let pct = 0, si = 0;
+  const iv = setInterval(() => {
+    pct = Math.min(90, pct + Math.floor(Math.random()*10)+6);
+    progressFill.style.width = pct+'%';
+    progressPct.textContent = pct+'%';
+    progressStatus.textContent = steps[si] || 'Processing…';
+    if (si < steps.length-1) si++;
+  }, 250);
+
+  try {
+    const resp = await fetch("{{ url_for('image_upscaler.upscale_image') }}", { method:'POST', body:fd });
+    clearInterval(iv);
+    if (!resp.ok) {
+      const js = await resp.json().catch(()=>({error:'Processing failed.'}));
+      throw new Error(js.error||'Upscaling failed.');
+    }
+
+    resultBlob = await resp.blob();
+    const outUrl = URL.createObjectURL(resultBlob);
+
+    progressFill.style.width = '100%';
+    progressPct.textContent = '100%';
+    progressStatus.textContent = 'Done!';
+
+    // Show comparison slider
+    afterImg.src = outUrl;
+    compareEmpty.style.display = 'none';
+    compareWrapper.style.display = 'block';
+    compareHint.style.display   = 'block';
+    downloadBtn.style.display   = 'flex';
+
+    // Update stats
+    const tmp = new window.Image();
+    tmp.onload = () => {
+      document.getElementById('statNew').textContent = `${tmp.width}×${tmp.height}`;
+    };
+    tmp.src = outUrl;
+    document.getElementById('statFileSize').textContent = `${(resultBlob.size/1024).toFixed(0)} KB`;
+    document.getElementById('statFmt').textContent = format;
+    upscaleLabel.textContent = `${scale} Upscaled`;
+
+    showToast('Image upscaled successfully!', 'success');
+
+  } catch(err) {
+    clearInterval(iv);
+    showToast(err.message||'Unexpected error.', 'error');
+  } finally {
+    upscaleBtn.disabled = false;
+    upscaleBtn.innerHTML = '<i data-lucide="maximize" style="width:18px;height:18px;"></i><span>Upscale Image</span>';
+    if (window.lucide) lucide.createIcons({ nodeList: upscaleBtn.querySelectorAll('[data-lucide]') });
+    setTimeout(() => { progressArea.style.display='none'; }, 2800);
+  }
+});
+
+/* ── Download ──────────────────────────────── */
+downloadBtn.addEventListener('click', () => {
+  if (!resultBlob) return;
+  const fmt = document.getElementById('output_format').value.toLowerCase();
+  const scale = document.getElementById('scaleHidden').value;
+  const url = URL.createObjectURL(resultBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `upscaled_${scale}.${fmt}`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Download started!', 'success');
+});
+
+/* ── Reset ─────────────────────────────────── */
+resetBtn.addEventListener('click', () => {
+  currentFile = null; resultBlob = null;
+  imageInput.value = '';
+  fileMeta.textContent = 'No file loaded';
+  upscaleBtn.disabled = true;
+  progressArea.style.display = 'none';
+  compareWrapper.style.display = 'none';
+  compareHint.style.display   = 'none';
+  compareEmpty.style.display  = 'flex';
+  downloadBtn.style.display   = 'none';
+  beforeImg.src = ''; afterImg.src = '';
+  ['statOrig','statNew','statFileSize'].forEach(id => document.getElementById(id).textContent='—');
+  showToast('Reset complete.','info');
+});
+
+/* ── Before/After drag slider ──────────────── */
+let isDragging = false;
+compareDivider.addEventListener('mousedown', e => { isDragging=true; e.preventDefault(); });
+document.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  moveSlider(e.clientX);
+});
+document.addEventListener('mouseup', () => isDragging=false);
+
+compareWrapper.addEventListener('touchstart', e => { isDragging=true; }, {passive:true});
+document.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  moveSlider(e.touches[0].clientX);
+}, {passive:true});
+document.addEventListener('touchend', () => isDragging=false);
+
+function moveSlider(clientX) {
+  const rect = compareWrapper.getBoundingClientRect();
+  let pct = (clientX - rect.left) / rect.width * 100;
+  pct = Math.max(2, Math.min(98, pct));
+  compareDivider.style.left = pct+'%';
+  afterImg.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+}
+
+// Also allow clicking on the wrapper to jump
+compareWrapper.addEventListener('click', e => {
+  if (isDragging) return;
+  moveSlider(e.clientX);
+});
+</script>
+{% endblock %}

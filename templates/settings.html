@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% block title %}Settings - E-Commerce Helping Platform{% endblock %}
+
+{% block content %}
+
+{% if success_msg %}
+<div id="successBanner" style="background:var(--success-light);border:1px solid rgba(16,185,129,.3);color:var(--success-color);padding:14px 20px;border-radius:14px;margin-bottom:24px;display:flex;align-items:center;gap:10px;font-weight:600;">
+  <i data-lucide="check-circle" style="width:20px;height:20px;"></i>
+  {{ success_msg }}
+</div>
+{% endif %}
+
+{% if error %}
+<div style="background:var(--danger-light);border:1px solid rgba(239,68,68,.3);color:var(--danger-color);padding:14px 20px;border-radius:14px;margin-bottom:24px;display:flex;align-items:center;gap:10px;font-weight:600;">
+  <i data-lucide="alert-triangle" style="width:20px;height:20px;"></i>
+  {{ error }}
+</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('main.settings_page') }}">
+
+  <!-- Page Header -->
+  <div class="welcome-hero" style="padding:28px 32px;margin-bottom:28px;">
+    <h1 class="welcome-title" style="font-size:1.8rem;">Platform Settings</h1>
+    <p class="welcome-subtitle" style="font-size:0.95rem;">
+      Manage feature toggles, AI configuration, and output preferences. Changes take effect immediately — no restart needed.
+    </p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+
+    <!-- ── Feature Toggles ────────────────────────────────── -->
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <h3 class="glass-card-title">
+          <i data-lucide="toggle-right"></i>
+          <span>Feature Toggles</span>
+        </h3>
+      </div>
+
+      {% set toggles = [
+        ("enable_pose_library",      "Enable Pose Library",           "Show the 20-pose selection grid on the generator page."),
+        ("enable_bg_generator",      "Enable Background Generator",   "Show background scene options during pose generation."),
+        ("enable_custom_prompt",     "Enable Custom Prompt",          "Let users type a free-form AI prompt for each generation."),
+        ("enable_batch_gen",         "Enable Batch Generation",       "Allow generating 1–20 images per request."),
+        ("enable_face_preservation", "Enable AI Face Preservation",   "Apply face-region consistency checks during rendering."),
+        ("enable_upscaling",         "Enable Image Upscaling",        "Render outputs at 2× resolution for Ultra HD quality."),
+        ("enable_zip_download",      "Enable ZIP Download",           "Pack all generated poses into a ZIP archive for bulk download."),
+        ("enable_preview",           "Enable Preview Before Gen.",    "Show a live image preview pane before submitting generation."),
+        ("enable_gpu",               "Enable GPU Processing",         "Route AI workloads to CUDA GPU if available (requires setup)."),
+        ("enable_experimental",      "Enable Experimental Features",  "Unlock beta tools not yet production-ready (use with caution).")
+      ] %}
+
+      <div style="display:flex;flex-direction:column;gap:0;">
+        {% for key, label, hint in toggles %}
+        <div class="switch-container" style="border-bottom:1px solid var(--border-color);padding:14px 0;">
+          <div>
+            <div class="switch-label" style="font-size:0.9rem;">{{ label }}</div>
+            <div class="hint" style="font-size:0.775rem;margin-top:2px;">{{ hint }}</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" name="{{ key }}" {% if settings.get(key, True) %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── Advanced Configuration ─────────────────────────── -->
+    <div style="display:flex;flex-direction:column;gap:24px;">
+
+      <div class="glass-card">
+        <div class="glass-card-header">
+          <h3 class="glass-card-title">
+            <i data-lucide="cpu"></i>
+            <span>Output Defaults</span>
+          </h3>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="default_quality">Default Image Quality</label>
+            <select id="default_quality" name="default_quality">
+              {% for q in ["Standard","High","Ultra HD"] %}
+              <option {% if settings.get('default_quality','High')==q %}selected{% endif %}>{{ q }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="default_format">Default Output Format</label>
+            <select id="default_format" name="default_format">
+              {% for fmt in ["PNG","JPG","WEBP"] %}
+              <option {% if settings.get('default_format','PNG')==fmt %}selected{% endif %}>{{ fmt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="max_images">Max Images per Request</label>
+            <input type="number" id="max_images" name="max_images" min="1" max="100" value="{{ settings.get('max_images',20) }}">
+          </div>
+          <div class="form-group">
+            <label for="max_upload_size">Max Upload Size (MB)</label>
+            <input type="number" id="max_upload_size" name="max_upload_size" min="1" max="100" value="{{ settings.get('max_upload_size',16) }}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="default_pose">Default Selected Pose</label>
+          <select id="default_pose" name="default_pose">
+            {% for p in ["Standing","Sitting","Walking","Front View","Back View","Casual Fashion","Smiling"] %}
+            <option {% if settings.get('default_pose','Standing')==p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="glass-card-header">
+          <h3 class="glass-card-title">
+            <i data-lucide="brain-circuit"></i>
+            <span>AI Model & Processing</span>
+          </h3>
+        </div>
+        <div class="form-group">
+          <label for="ai_model">Active AI Model Pipeline</label>
+          <select id="ai_model" name="ai_model">
+            {% for m in ["Stable Diffusion XL","ControlNet SDXL","Flux Kontext","DWPose + SDXL","Replicate API","ComfyUI Local","OpenPose Classic"] %}
+            <option {% if settings.get('ai_model','Stable Diffusion XL')==m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+          <div class="hint">Future AI models can be plugged in by extending <code>services/pose_service.py</code>.</div>
+        </div>
+        <div class="form-group">
+          <label for="gpu_mode">Processing Mode</label>
+          <select id="gpu_mode" name="gpu_mode">
+            {% for mode in ["CPU","GPU (CUDA)","GPU (ROCm)","MPS (Apple Silicon)"] %}
+            <option {% if settings.get('gpu_mode','CPU')==mode %}selected{% endif %}>{{ mode }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="random_seed">Random Seed (leave blank for random)</label>
+          <input type="text" id="random_seed" name="random_seed" placeholder="e.g. 42" value="{{ settings.get('random_seed','') }}">
+        </div>
+        <div class="switch-container">
+          <div>
+            <div class="switch-label">Auto Cleanup Generated Files</div>
+            <div class="hint" style="font-size:0.775rem;">Remove temporary output files after download.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" name="auto_cleanup" {% if settings.get('auto_cleanup', True) %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+    </div><!-- /right column -->
+  </div><!-- /grid -->
+
+  <!-- Save Button -->
+  <div style="margin-top:28px;display:flex;gap:14px;justify-content:flex-end;">
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">
+      <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Dashboard
+    </a>
+    <button type="submit" class="btn btn-primary" style="padding:12px 32px;">
+      <i data-lucide="save" style="width:16px;height:16px;"></i>
+      Save Configuration
+    </button>
+  </div>
+
+</form>
+
+{% block extra_js %}
+<script>
+  // Auto-dismiss success banner after 4 s
+  const banner = document.getElementById('successBanner');
+  if (banner) setTimeout(() => banner.style.display='none', 4000);
+</script>
+{% endblock %}
+{% endblock %}

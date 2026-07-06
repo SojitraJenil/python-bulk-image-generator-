@@ -1,0 +1,562 @@
+{% extends 'base.html' %}
+{% block title %}AI Pose Generator - E-Commerce Helping Platform{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Pose Grid ─────────────────────────── */
+  .pose-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .pose-card {
+    border: 2px solid var(--border-color);
+    border-radius: 14px;
+    padding: 10px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--bg-primary);
+    user-select: none;
+  }
+  .pose-card:hover  { border-color: var(--accent-color); background: var(--accent-light); }
+  .pose-card.active { border-color: var(--accent-color); background: var(--accent-light); box-shadow: 0 0 0 3px rgba(99,102,241,.2); }
+  .pose-card i      { width:22px; height:22px; color: var(--text-secondary); }
+  .pose-card.active i { color: var(--accent-color); }
+  .pose-card span   { font-size: 0.7rem; font-weight: 600; text-align: center; color: var(--text-muted); line-height: 1.3; }
+  .pose-card.active span { color: var(--accent-color); }
+
+  /* ── Background Cards ──────────────────── */
+  .bg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .bg-card {
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .bg-card:hover  { border-color: var(--accent-color); transform: translateY(-2px); }
+  .bg-card.active { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(99,102,241,.2); }
+  .bg-swatch      { height: 44px; width: 100%; }
+  .bg-label       { font-size: 0.68rem; font-weight: 600; text-align: center; padding: 4px 3px; color: var(--text-muted); line-height: 1.3; }
+  .bg-card.active .bg-label { color: var(--accent-color); }
+
+  /* ── Output Gallery ────────────────────── */
+  .output-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+  }
+  .output-item {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    aspect-ratio: 1/1.25;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeInUp 0.4s ease forwards;
+  }
+  .output-item img { width:100%; height:100%; object-fit:cover; }
+  .output-item .dl-btn {
+    position: absolute;
+    bottom: 8px; right: 8px;
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(6px);
+    border: none; border-radius: 8px;
+    color: #fff; padding: 6px 10px;
+    font-size: 0.75rem; font-weight: 700;
+    cursor: pointer; display:flex; align-items:center; gap:4px;
+    opacity: 0; transition: opacity 0.2s ease;
+  }
+  .output-item:hover .dl-btn { opacity: 1; }
+  .output-item .pose-tag {
+    position: absolute; top: 8px; left: 8px;
+    background: rgba(0,0,0,.55); color:#fff;
+    font-size:0.65rem; font-weight:700;
+    padding: 3px 8px; border-radius: 99px;
+  }
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tool-layout">
+
+  <!-- ══════════════════════════════════════════
+       LEFT COLUMN — Controls Form
+  ═══════════════════════════════════════════ -->
+  <form id="poseForm" enctype="multipart/form-data" class="glass-card">
+    <div class="glass-card-header">
+      <h3 class="glass-card-title">
+        <i data-lucide="sliders-horizontal"></i>
+        <span>Pose Generator Controls</span>
+      </h3>
+      <span class="tool-badge active" style="font-size:0.73rem;">
+        <i data-lucide="zap" style="width:11px;height:11px;"></i> AI Ready
+      </span>
+    </div>
+
+    <!-- 1. Upload -->
+    <div class="form-section">
+      <h4 class="form-section-title">1. Upload Product Image</h4>
+      <div class="form-group">
+        <div id="uploadZone" class="upload-zone" tabindex="0">
+          <div class="upload-icon"><i data-lucide="upload-cloud"></i></div>
+          <p><span>Click to browse</span> or drag & drop</p>
+          <div class="hint">JPG · PNG · WEBP · Max {{ settings.get('max_upload_size', 16) }} MB</div>
+          <div id="fileMeta" class="hint" style="font-weight:600;margin-top:4px;color:var(--text-secondary);">No file loaded</div>
+        </div>
+        <input id="imageInput" name="image" type="file" accept="image/jpeg,image/png,image/webp" required style="display:none;">
+      </div>
+
+      {% if settings.get('enable_preview', True) %}
+      <div id="previewPane" style="display:none;margin-top:12px;border-radius:14px;overflow:hidden;border:1px solid var(--border-color);max-height:220px;">
+        <img id="previewImg" src="" alt="Preview" style="width:100%;height:220px;object-fit:contain;background:var(--bg-tertiary);">
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- 2. Pose Library -->
+    {% if settings.get('enable_pose_library', True) %}
+    <div class="form-section">
+      <h4 class="form-section-title">2. Select Poses</h4>
+      <div class="hint" style="margin-bottom:8px;">Click multiple poses — one image per selected pose.</div>
+      <div class="pose-grid" id="poseGrid">
+        {% for p in poses %}
+        <div class="pose-card" data-pose="{{ p.label }}" onclick="togglePose(this)">
+          <i data-lucide="{{ p.icon }}"></i>
+          <span>{{ p.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="poses" id="posesHidden">
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button type="button" class="btn btn-secondary" style="font-size:0.8rem;padding:6px 14px;" onclick="selectAllPoses()">Select All</button>
+        <button type="button" class="btn btn-ghost" style="font-size:0.8rem;padding:6px 14px;" onclick="clearPoses()">Clear</button>
+        <span id="poseCount" style="margin-left:auto;font-size:0.8rem;font-weight:700;color:var(--accent-color);align-self:center;">0 selected</span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 3. Custom Prompt -->
+    {% if settings.get('enable_custom_prompt', True) %}
+    <div class="form-section">
+      <h4 class="form-section-title">3. Custom AI Prompt</h4>
+      <div class="form-group">
+        <textarea name="custom_prompt" rows="3" placeholder='e.g. "Girl sitting on a modern chair wearing the same lavender night suit with soft studio lighting."'
+          style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px;font-family:inherit;color:var(--text-primary);font-size:0.875rem;resize:vertical;width:100%;transition:border-color .2s;"></textarea>
+        <div class="hint">Optional. Describe the setting — the AI preserves clothing, face, and product.</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 4. Background -->
+    {% if settings.get('enable_bg_generator', True) %}
+    <div class="form-section">
+      <h4 class="form-section-title">4. Background Scene</h4>
+      <div class="bg-grid" id="bgGrid">
+        {% for bg in backgrounds %}
+        <div class="bg-card {% if loop.first %}active{% endif %}" data-bg="{{ bg.id }}" onclick="selectBg(this)">
+          <div class="bg-swatch" style="background:{{ bg.color }};"></div>
+          <div class="bg-label">{{ bg.id }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="background" id="bgHidden" value="{{ backgrounds[0].id }}">
+    </div>
+    {% endif %}
+
+    <!-- 5. Output Options -->
+    <div class="form-section">
+      <h4 class="form-section-title">5. Output Options</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quality">Image Quality</label>
+          <select id="quality" name="quality">
+            {% for q in ["Standard","High","Ultra HD"] %}
+            <option {% if settings.get('default_quality','High')==q %}selected{% endif %}>{{ q }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="aspect_ratio">Aspect Ratio</label>
+          <select id="aspect_ratio" name="aspect_ratio">
+            <option>Original</option>
+            <option>1:1</option>
+            <option>4:5</option>
+            <option>3:4</option>
+            <option>9:16</option>
+          </select>
+        </div>
+      </div>
+
+      {% if settings.get('enable_batch_gen', True) %}
+      <div class="form-row">
+        <div class="form-group">
+          <label for="batch_count">Batch Count</label>
+          <select id="batch_count" name="batch_count">
+            {% for n in [1, 5, 10, 20] %}
+            <option>{{ n }}</option>
+            {% endfor %}
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="form-group" id="customCountGroup" style="display:none;">
+          <label for="custom_count">Custom Count (max {{ settings.get('max_images', 20) }})</label>
+          <input type="number" id="custom_count" name="custom_count" min="1" max="{{ settings.get('max_images', 20) }}" value="3">
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="form-group">
+        <label for="seed">Random Seed <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
+        <input type="text" id="seed" name="seed" placeholder="Leave blank for random" value="{{ settings.get('random_seed','') }}">
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:14px;margin-top:28px;">
+      <button type="submit" id="generateBtn" class="btn btn-primary" style="flex:2;padding:13px;" disabled>
+        <i data-lucide="wand-2" style="width:18px;height:18px;"></i>
+        <span>Generate Poses</span>
+      </button>
+      <button type="button" id="resetBtn" class="btn btn-secondary" style="flex:1;">
+        <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i> Reset
+      </button>
+    </div>
+
+    <!-- Progress Bar -->
+    <div id="progressArea" class="progress-container" style="display:none;margin-top:20px;">
+      <div class="progress-info">
+        <span id="progressStatus">Initialising AI pipeline…</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div id="progressFill" class="progress-bar-fill"></div>
+      </div>
+    </div>
+  </form>
+
+  <!-- ══════════════════════════════════════════
+       RIGHT COLUMN — Output Gallery
+  ═══════════════════════════════════════════ -->
+  <div class="sticky-pane">
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <h3 class="glass-card-title">
+          <i data-lucide="image"></i>
+          <span>Generated Poses</span>
+        </h3>
+        {% if settings.get('enable_zip_download', True) %}
+        <button id="zipDownloadBtn" class="btn btn-secondary" style="font-size:0.8rem;padding:7px 14px;display:none;" onclick="downloadZip()">
+          <i data-lucide="folder-down" style="width:15px;height:15px;"></i> Download ZIP
+        </button>
+        {% endif %}
+      </div>
+
+      <!-- Empty state -->
+      <div id="outputEmpty" class="preview-empty-state">
+        <i data-lucide="wand-2" style="width:48px;height:48px;stroke-width:1.5;"></i>
+        <p>Upload an image, select poses, and click <strong>Generate Poses</strong></p>
+      </div>
+
+      <!-- Output grid -->
+      <div id="outputGrid" class="output-grid" style="display:none;"></div>
+    </div>
+
+    <!-- Stats card -->
+    <div class="glass-card" style="margin-top:20px;">
+      <div class="glass-card-header" style="margin-bottom:14px;">
+        <h3 class="glass-card-title" style="font-size:1rem;">
+          <i data-lucide="bar-chart-2"></i>
+          <span>Session Stats</span>
+        </h3>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        {% for label, id in [("Images Generated","statGenerated"),("Poses Selected","statPoses"),("AI Model","statModel"),("GPU Mode","statGpu")] %}
+        <div style="background:var(--bg-tertiary);border-radius:12px;padding:14px;">
+          <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700;margin-bottom:4px;">{{ label }}</div>
+          <div id="{{ id }}" style="font-size:1.2rem;font-weight:800;color:var(--text-primary);">
+            {% if id == "statModel" %}{{ settings.get('ai_model','SDXL') | truncate(12,True,'…') }}
+            {% elif id == "statGpu"  %}{{ settings.get('gpu_mode','CPU') }}
+            {% else %}0{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  /* ── DOM refs ──────────────────────────────── */
+  const form          = document.getElementById('poseForm');
+  const imageInput    = document.getElementById('imageInput');
+  const uploadZone    = document.getElementById('uploadZone');
+  const fileMeta      = document.getElementById('fileMeta');
+  const previewImg    = document.getElementById('previewImg');
+  const previewPane   = document.getElementById('previewPane');
+  const generateBtn   = document.getElementById('generateBtn');
+  const resetBtn      = document.getElementById('resetBtn');
+  const progressArea  = document.getElementById('progressArea');
+  const progressStatus= document.getElementById('progressStatus');
+  const progressPct   = document.getElementById('progressPct');
+  const progressFill  = document.getElementById('progressFill');
+  const outputGrid    = document.getElementById('outputGrid');
+  const outputEmpty   = document.getElementById('outputEmpty');
+  const zipBtn        = document.getElementById('zipDownloadBtn');
+  const statGenerated = document.getElementById('statGenerated');
+  const statPoses     = document.getElementById('statPoses');
+  const posesHidden   = document.getElementById('posesHidden');
+  const batchSelect   = document.getElementById('batch_count');
+  const customGroup   = document.getElementById('customCountGroup');
+  const bgHidden      = document.getElementById('bgHidden');
+  const poseCountEl   = document.getElementById('poseCount');
+
+  let generatedBlob = null;
+  let totalGenerated = 0;
+
+  /* ── Pose multi-select ──────────────────── */
+  const selectedPoses = new Set();
+
+  function togglePose(card) {
+    const p = card.dataset.pose;
+    if (selectedPoses.has(p)) {
+      selectedPoses.delete(p);
+      card.classList.remove('active');
+    } else {
+      selectedPoses.add(p);
+      card.classList.add('active');
+    }
+    posesHidden.value = [...selectedPoses].join(',');
+    poseCountEl.textContent = selectedPoses.size + ' selected';
+    if (statPoses) statPoses.textContent = selectedPoses.size;
+  }
+
+  function selectAllPoses() {
+    document.querySelectorAll('.pose-card').forEach(c => {
+      selectedPoses.add(c.dataset.pose);
+      c.classList.add('active');
+    });
+    poseCountEl.textContent = selectedPoses.size + ' selected';
+    posesHidden.value = [...selectedPoses].join(',');
+    if (statPoses) statPoses.textContent = selectedPoses.size;
+  }
+
+  function clearPoses() {
+    selectedPoses.clear();
+    document.querySelectorAll('.pose-card').forEach(c => c.classList.remove('active'));
+    poseCountEl.textContent = '0 selected';
+    posesHidden.value = '';
+    if (statPoses) statPoses.textContent = 0;
+  }
+
+  /* ── Background select ──────────────────── */
+  function selectBg(card) {
+    document.querySelectorAll('.bg-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    bgHidden.value = card.dataset.bg;
+  }
+
+  /* ── File upload ────────────────────────── */
+  function handleFile(file) {
+    if (!file) return;
+    const allowed = ['image/jpeg','image/png','image/webp'];
+    if (!allowed.includes(file.type)) {
+      showToast('Please upload JPG, PNG, or WEBP.', 'error'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      if (previewImg && previewPane) {
+        previewImg.src = e.target.result;
+        previewPane.style.display = 'block';
+      }
+      fileMeta.textContent = `${file.name} • ${(file.size/1024/1024).toFixed(2)} MB`;
+      generateBtn.disabled = false;
+      showToast('Product image loaded!', 'success');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  imageInput.addEventListener('change', e => handleFile(e.target.files[0]));
+  uploadZone.addEventListener('click', () => imageInput.click());
+  uploadZone.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); imageInput.click(); }});
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+  uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
+
+  /* ── Batch "Custom" ─────────────────────── */
+  if (batchSelect) {
+    batchSelect.addEventListener('change', () => {
+      customGroup.style.display = batchSelect.value === 'custom' ? 'block' : 'none';
+    });
+  }
+
+  /* ── Form submit ────────────────────────── */
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    // Resolve batch count
+    let batchVal = batchSelect ? batchSelect.value : '1';
+    const customCount = document.getElementById('custom_count');
+    if (batchVal === 'custom' && customCount) batchVal = customCount.value;
+
+    const fd = new FormData(form);
+    fd.set('batch_count', batchVal);
+    // Send poses as comma-separated (backend uses getlist)
+    fd.delete('poses');
+    [...selectedPoses].forEach(p => fd.append('poses', p));
+
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<span class="spinner"></span><span>Generating…</span>';
+    progressArea.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressPct.textContent = '0%';
+
+    let pct = 0;
+    const messages = [
+      'Loading AI model weights…',
+      'Extracting OpenPose keypoints…',
+      'Conditioning ControlNet…',
+      'Running diffusion sampling…',
+      'Applying face preservation…',
+      'Compositing backgrounds…',
+      'Packaging outputs…'
+    ];
+    let msgIdx = 0;
+    const iv = setInterval(() => {
+      pct = Math.min(92, pct + Math.floor(Math.random()*6)+3);
+      progressFill.style.width = pct + '%';
+      progressPct.textContent = pct + '%';
+      progressStatus.textContent = messages[msgIdx] || 'Processing…';
+      if (msgIdx < messages.length-1) msgIdx++;
+    }, 380);
+
+    try {
+      const resp = await fetch("{{ url_for('pose_generator.generate_poses') }}", { method:'POST', body:fd });
+      clearInterval(iv);
+
+      if (!resp.ok) {
+        const js = await resp.json().catch(() => ({error:'Generation failed.'}));
+        throw new Error(js.error || 'Generation failed.');
+      }
+
+      const blob = await resp.blob();
+      generatedBlob = blob;
+      progressFill.style.width = '100%';
+      progressPct.textContent = '100%';
+      progressStatus.textContent = 'Done! Images ready.';
+
+      // Render outputs
+      outputEmpty.style.display = 'none';
+      outputGrid.style.display = 'grid';
+      outputGrid.innerHTML = '';
+
+      const isZip = blob.type === 'application/zip';
+      if (isZip) {
+        // For ZIP — show placeholder tiles
+        const count = parseInt(batchVal) || 1;
+        const poses = [...selectedPoses];
+        for (let i=0; i<count; i++) {
+          addOutputTile(null, poses[i] || 'Pose '+(i+1), i, blob, count === 1);
+        }
+        totalGenerated += count;
+        if (zipBtn) zipBtn.style.display = 'flex';
+      } else {
+        // Single image — show directly
+        addOutputTile(URL.createObjectURL(blob), [...selectedPoses][0] || 'Pose 1', 0, blob, true);
+        totalGenerated += 1;
+        if (zipBtn) zipBtn.style.display = 'none';
+      }
+
+      if (statGenerated) statGenerated.textContent = totalGenerated;
+      showToast(`${isZip ? batchVal : '1'} pose image(s) generated!`, 'success');
+
+    } catch(err) {
+      clearInterval(iv);
+      showToast(err.message || 'Unexpected error.', 'error');
+    } finally {
+      generateBtn.disabled = false;
+      generateBtn.innerHTML = '<i data-lucide="wand-2" style="width:18px;height:18px;"></i><span>Generate Poses</span>';
+      if (window.lucide) lucide.createIcons({ nodeList: generateBtn.querySelectorAll('[data-lucide]') });
+      setTimeout(() => { progressArea.style.display = 'none'; }, 3000);
+    }
+  });
+
+  function addOutputTile(objectUrl, poseLabel, idx, fullBlob, isSingle) {
+    const div = document.createElement('div');
+    div.className = 'output-item';
+    div.style.animationDelay = (idx * 0.07) + 's';
+
+    if (objectUrl) {
+      div.innerHTML = `
+        <img src="${objectUrl}" alt="${poseLabel}" loading="lazy">
+        <span class="pose-tag">${poseLabel}</span>
+        <button class="dl-btn" onclick="downloadSingle('${objectUrl}','pose_${idx+1}.png')">
+          <i data-lucide="download" style="width:12px;height:12px;"></i> Save
+        </button>`;
+    } else {
+      // ZIP — placeholder card with download via zip
+      div.style.background = 'var(--bg-tertiary)';
+      div.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;text-align:center;">
+          <i data-lucide="image" style="width:36px;height:36px;color:var(--text-muted);stroke-width:1.5;"></i>
+          <span style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);">${poseLabel}</span>
+          <span style="font-size:0.65rem;color:var(--text-muted);">Included in ZIP</span>
+        </div>`;
+    }
+    outputGrid.appendChild(div);
+    if (window.lucide) lucide.createIcons({ nodeList: div.querySelectorAll('[data-lucide]') });
+  }
+
+  function downloadSingle(url, name) {
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    showToast('Image download started.', 'success');
+  }
+
+  function downloadZip() {
+    if (!generatedBlob) return;
+    const url = URL.createObjectURL(generatedBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'pose_images.zip'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('ZIP download started!', 'success');
+  }
+
+  resetBtn.addEventListener('click', () => {
+    form.reset();
+    clearPoses();
+    if (previewPane) previewPane.style.display = 'none';
+    fileMeta.textContent = 'No file loaded';
+    outputGrid.style.display = 'none';
+    outputGrid.innerHTML = '';
+    outputEmpty.style.display = 'flex';
+    if (zipBtn) zipBtn.style.display = 'none';
+    generateBtn.disabled = true;
+    progressArea.style.display = 'none';
+    generatedBlob = null;
+    document.querySelectorAll('.bg-card').forEach((c,i) => { if(i===0) c.classList.add('active'); else c.classList.remove('active'); });
+    if (bgHidden) bgHidden.value = '{{ backgrounds[0].id }}';
+    showToast('Controls reset.', 'info');
+  });
+</script>
+{% endblock %}
